@@ -7,6 +7,7 @@ import { AppSwitcher } from './main/app-switcher';
 import { AutoSwitcher } from './main/auto-switch';
 import { ActionExecutor } from './main/action-executor';
 import type { ProfileConfig, GridKey } from './shared/types';
+import { NativeHost } from './main/native-host';
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (require('electron-squirrel-startup')) {
@@ -110,21 +111,15 @@ function onProfileSwitch(): void {
   mainWindow?.webContents.send('profile-changed', profiles.getActiveProfileName());
 }
 
-// Stub native host bridge until Task 11
-const nativeHostStub = {
-  async focusOrOpen(url: string): Promise<boolean> {
-    console.log('Native host stub: focusOrOpen', url);
-    return false;
-  },
-};
-
 app.whenReady().then(() => {
   const config = loadConfig();
   profiles = new ProfileEngine(config);
   serial = new SerialManager();
   appSwitcher = new AppSwitcher();
   autoSwitcher = new AutoSwitcher(appSwitcher, profiles, onProfileSwitch);
-  actionExecutor = new ActionExecutor(appSwitcher, serial as any, profiles, nativeHostStub);
+  const nativeHost = new NativeHost(profiles);
+  nativeHost.start();
+  actionExecutor = new ActionExecutor(appSwitcher, serial as any, profiles, nativeHost);
 
   serial.on('keyEvent', (event) => actionExecutor.handleKeyEvent(event));
   serial.on('ready', () => {
