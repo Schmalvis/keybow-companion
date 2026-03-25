@@ -1,0 +1,7 @@
+{
+  "name": "com.keybow.companion",
+  "description": "Keybow Companion native messaging host",
+  "path": "native-host.js",
+  "type": "stdio",
+  "allowed_origins": ["chrome-extension://EXTENSION_ID_HERE/"]
+}
