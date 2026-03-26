@@ -16,11 +16,11 @@ declare global {
       onProfileChanged: (callback: (name: string) => void) => void;
       onDeviceStatus: (callback: (connected: boolean) => void) => void;
       onKeyEvent: (callback: (key: string, event: string) => void) => void;
-      getInstalledApps: () => Promise<Array<{ name: string; path: string }>>;
-      browseForApp: () => Promise<string | null>;
-      getTemplates: () => Promise<Array<{ id: string; name: string; description: string; keys: Record<string, unknown> }>>;
-      getSuggestions: (appPath: string) => Promise<Array<{ label: string; keys: string; action: string }>>;
-      previewLed: (key: string, color: string) => Promise<void>;
+      getInstalledApps: () => Promise<Array<{ name: string; process: string; path: string }>>;
+      browseForApp: () => Promise<{ name: string; process: string; path: string } | null>;
+      getTemplates: () => Promise<any>;
+      getSuggestions: () => Promise<any>;
+      previewLed: (key: string, color: string) => void;
     };
   }
 }
@@ -31,6 +31,14 @@ function App() {
   const [connected, setConnected] = useState(false);
   const [pressedKey, setPressedKey] = useState<GridKey | null>(null);
   const [showTemplates, setShowTemplates] = useState(false);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setSelectedKey(null);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   useEffect(() => {
     window.keybow.getConfig().then(setConfig);
@@ -99,15 +107,13 @@ function App() {
           </div>
         )}
       </div>
-      {showTemplates && <TemplatePicker onClose={() => setShowTemplates(false)} onApply={(templateKeys) => {
-        const updated = { ...config };
-        updated.profiles[config.activeProfile] = {
-          ...activeProfile,
-          keys: { ...activeProfile.keys, ...templateKeys },
-        };
-        handleSave(updated);
-        setShowTemplates(false);
-      }} />}
+      {showTemplates && (
+        <TemplatePicker
+          config={config}
+          onApply={handleSave}
+          onClose={() => setShowTemplates(false)}
+        />
+      )}
     </div>
   );
 }
