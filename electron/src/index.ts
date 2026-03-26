@@ -72,8 +72,47 @@ function createWindow(): void {
   });
 }
 
+function createTrayIcon(): Electron.NativeImage {
+  // 16x16 RGBA icon: dark background with a 4x4 grid of colored key dots
+  const size = 16;
+  const buf = Buffer.alloc(size * size * 4, 0); // fill with transparent black
+
+  // Background: dark grey (R=30, G=30, B=30, A=255)
+  for (let i = 0; i < size * size; i++) {
+    buf[i * 4 + 0] = 30;
+    buf[i * 4 + 1] = 30;
+    buf[i * 4 + 2] = 30;
+    buf[i * 4 + 3] = 255;
+  }
+
+  // 4x4 grid of key dots — each dot is a 2x2 block of blue-green pixels
+  // Grid starts at pixel (2,2) with 3px spacing between dot origins
+  const dotColor = { r: 0, g: 180, b: 220 }; // cyan-blue
+  for (let row = 0; row < 4; row++) {
+    for (let col = 0; col < 4; col++) {
+      const originX = 2 + col * 3;
+      const originY = 2 + row * 3;
+      for (let dy = 0; dy < 2; dy++) {
+        for (let dx = 0; dx < 2; dx++) {
+          const px = originX + dx;
+          const py = originY + dy;
+          if (px < size && py < size) {
+            const idx = (py * size + px) * 4;
+            buf[idx + 0] = dotColor.r;
+            buf[idx + 1] = dotColor.g;
+            buf[idx + 2] = dotColor.b;
+            buf[idx + 3] = 255;
+          }
+        }
+      }
+    }
+  }
+
+  return nativeImage.createFromBuffer(buf, { width: size, height: size });
+}
+
 function createTray(): void {
-  tray = new Tray(nativeImage.createEmpty());
+  tray = new Tray(createTrayIcon());
   tray.setToolTip('Keybow Companion');
   tray.on('click', () => { mainWindow?.show(); mainWindow?.focus(); });
   updateTrayMenu();
