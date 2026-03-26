@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import { KeyGrid } from './components/KeyGrid';
-import { WizardPanel } from './components/WizardPanel';
+import { WizardPanel } from './components/wizard/WizardPanel';
 import { TemplatePicker } from './components/TemplatePicker';
 import { ProfileBar } from './components/ProfileBar';
-import type { ProfileConfig, GridKey } from '../shared/types';
+import type { ProfileConfig, GridKey, KeyAction } from '../shared/types';
 import './styles/app.css';
 import './styles/wizard.css';
 
@@ -81,7 +81,7 @@ function App() {
             existingAction={activeProfile.keys[selectedKey]}
             defaultColor={activeProfile.defaultColor}
             profileNames={config.profileOrder}
-            onSave={(key, action) => {
+            onSave={(key: GridKey, action: KeyAction) => {
               const updated = { ...config };
               updated.profiles[config.activeProfile] = {
                 ...activeProfile,
@@ -89,7 +89,7 @@ function App() {
               };
               handleSave(updated);
             }}
-            onRemove={(key) => {
+            onRemove={(key: GridKey) => {
               const updated = { ...config };
               const newKeys = { ...activeProfile.keys };
               delete newKeys[key];
