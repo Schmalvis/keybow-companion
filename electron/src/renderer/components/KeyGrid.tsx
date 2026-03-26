@@ -7,10 +7,11 @@ const COLS = ['1', '2', '3', '4'] as const;
 interface KeyGridProps {
   profile: Profile;
   selectedKey: GridKey | null;
+  pressedKey: GridKey | null;
   onSelectKey: (key: GridKey) => void;
 }
 
-export function KeyGrid({ profile, selectedKey, onSelectKey }: KeyGridProps) {
+export function KeyGrid({ profile, selectedKey, pressedKey, onSelectKey }: KeyGridProps) {
   return (
     <div className="key-grid">
       {ROWS.map((row) => (
@@ -20,16 +21,17 @@ export function KeyGrid({ profile, selectedKey, onSelectKey }: KeyGridProps) {
             const action = profile.keys[gridKey];
             const color = action?.activeColor ?? profile.defaultColor;
             const isSelected = selectedKey === gridKey;
+            const isPressed = pressedKey === gridKey;
             return (
               <button
                 key={gridKey}
-                className={`key-button ${isSelected ? 'selected' : ''}`}
-                style={{ backgroundColor: `#${color}` }}
+                className={`key-button ${isSelected ? 'selected' : ''} ${isPressed ? 'pressed' : ''}`}
+                style={{ backgroundColor: isPressed ? '#ffffff' : `#${color}` }}
                 onClick={() => onSelectKey(gridKey)}
                 title={action?.label ?? gridKey}
               >
-                <span className="key-label">{action?.label ?? ''}</span>
-                <span className="key-id">{gridKey}</span>
+                <span className="key-label" style={isPressed ? { color: '#000' } : undefined}>{action?.label ?? ''}</span>
+                <span className="key-id" style={isPressed ? { color: '#333' } : undefined}>{gridKey}</span>
               </button>
             );
           })}

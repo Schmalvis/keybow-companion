@@ -65,7 +65,7 @@ export function KeyConfig({ gridKey, action, defaultColor, onSave, onRemove }: K
         <>
           <div className="field">
             <label>Process Name</label>
-            <input value={processName} onChange={(e) => setProcessName(e.target.value)} placeholder="e.g., slack.exe" />
+            <input value={processName} onChange={(e) => setProcessName(e.target.value)} placeholder="e.g., Slack" />
           </div>
           <div className="field">
             <label>Executable Path</label>

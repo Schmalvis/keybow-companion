@@ -1,10 +1,20 @@
 # firmware/code.py
-import supervisor
+import time
+import usb_cdc
 from pmk import PMK
 from pmk.platform.keybow2040 import Keybow2040 as Hardware
 
 keybow = PMK(Hardware())
+keybow.rotate(270)  # 90 degrees anti-clockwise
 keys = keybow.keys
+
+# Get the data serial port (enabled in boot.py)
+serial = usb_cdc.data
+if serial is None:
+    # Fallback: data port not available, halt with red LED
+    keybow.set_all(255, 0, 0)
+    while True:
+        pass
 
 ROWS = 'ABCD'
 
@@ -19,6 +29,7 @@ def grid_to_num(grid):
     return row * 4 + col
 
 led_colors = {}
+serial_buffer = ""
 
 def is_valid_hex(s):
     if len(s) != 6:
@@ -30,7 +41,19 @@ def is_valid_hex(s):
         return False
 
 def send(msg):
-    print(msg)
+    serial.write((msg + "\n").encode("utf-8"))
+
+def read_serial_line():
+    global serial_buffer
+    available = serial.in_waiting
+    if available:
+        data = serial.read(available)
+        if data:
+            serial_buffer += "".join(chr(b) for b in data)
+    if "\n" in serial_buffer:
+        line, serial_buffer = serial_buffer.split("\n", 1)
+        return line.strip()
+    return None
 
 def parse_command(line):
     line = line.strip()
@@ -100,6 +123,6 @@ send("READY")
 
 while True:
     keybow.update()
-    if supervisor.runtime.serial_bytes_available:
-        line = input()
+    line = read_serial_line()
+    if line is not None:
         parse_command(line)

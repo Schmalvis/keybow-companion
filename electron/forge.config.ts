@@ -15,7 +15,9 @@ const config: ForgeConfig = {
   packagerConfig: {
     asar: true,
   },
-  rebuildConfig: {},
+  rebuildConfig: {
+    onlyModules: [], // Skip native rebuild — serialport is externalized in webpack
+  },
   makers: [
     new MakerSquirrel({}),
     new MakerZIP({}, ['darwin']),

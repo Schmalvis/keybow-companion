@@ -13,6 +13,7 @@ declare global {
       saveConfig: (config: ProfileConfig) => Promise<boolean>;
       onProfileChanged: (callback: (name: string) => void) => void;
       onDeviceStatus: (callback: (connected: boolean) => void) => void;
+      onKeyEvent: (callback: (key: string, event: string) => void) => void;
     };
   }
 }
@@ -21,6 +22,7 @@ function App() {
   const [config, setConfig] = useState<ProfileConfig | null>(null);
   const [selectedKey, setSelectedKey] = useState<GridKey | null>(null);
   const [connected, setConnected] = useState(false);
+  const [pressedKey, setPressedKey] = useState<GridKey | null>(null);
 
   useEffect(() => {
     window.keybow.getConfig().then(setConfig);
@@ -28,6 +30,13 @@ function App() {
       setConfig((prev) => prev ? { ...prev, activeProfile: name } : prev);
     });
     window.keybow.onDeviceStatus(setConnected);
+    window.keybow.onKeyEvent((key, event) => {
+      if (event === 'PRESS') {
+        setPressedKey(key as GridKey);
+      } else if (event === 'RELEASE') {
+        setPressedKey(null);
+      }
+    });
   }, []);
 
   if (!config) return <div className="loading">Loading...</div>;
@@ -49,7 +58,7 @@ function App() {
       </header>
       <ProfileBar config={config} onSave={handleSave} />
       <div className="main-content">
-        <KeyGrid profile={activeProfile} selectedKey={selectedKey} onSelectKey={setSelectedKey} />
+        <KeyGrid profile={activeProfile} selectedKey={selectedKey} pressedKey={pressedKey} onSelectKey={setSelectedKey} />
         {selectedKey && (
           <KeyConfig
             gridKey={selectedKey}

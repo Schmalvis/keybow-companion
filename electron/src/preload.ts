@@ -9,4 +9,7 @@ contextBridge.exposeInMainWorld('keybow', {
   onDeviceStatus: (callback: (connected: boolean) => void) => {
     ipcRenderer.on('device-status', (_event, connected) => callback(connected));
   },
+  onKeyEvent: (callback: (key: string, event: string) => void) => {
+    ipcRenderer.on('key-event', (_event, key, eventType) => callback(key, eventType));
+  },
 });

@@ -121,10 +121,23 @@ app.whenReady().then(() => {
   nativeHost.start();
   actionExecutor = new ActionExecutor(appSwitcher, serial as any, profiles, nativeHost);
 
-  serial.on('keyEvent', (event) => actionExecutor.handleKeyEvent(event));
+  serial.on('keyEvent', (event) => {
+    actionExecutor.handleKeyEvent(event);
+    mainWindow?.webContents.send('key-event', event.key, event.event);
+  });
   serial.on('ready', () => {
     mainWindow?.webContents.send('device-status', true);
     onProfileSwitch();
+  });
+  serial.on('connected', () => {
+    // Device connected — also mark as connected and send LED state
+    // (READY may have been sent before we connected)
+    mainWindow?.webContents.send('device-status', true);
+    onProfileSwitch();
+  });
+  serial.on('pong', () => {
+    // Receiving PONGs confirms connection is alive
+    mainWindow?.webContents.send('device-status', true);
   });
   serial.on('disconnected', () => {
     mainWindow?.webContents.send('device-status', false);
@@ -144,8 +157,8 @@ app.whenReady().then(() => {
   autoSwitcher.start();
 });
 
-app.on('window-all-closed', (e: Event) => {
-  e.preventDefault();
+app.on('window-all-closed', () => {
+  // Don't quit — keep running in tray
 });
 
 declare const MAIN_WINDOW_WEBPACK_ENTRY: string;

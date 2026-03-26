@@ -17,4 +17,9 @@ export const mainConfig: Configuration = {
   resolve: {
     extensions: ['.js', '.ts', '.jsx', '.tsx', '.css', '.json'],
   },
+  // Native modules must be loaded at runtime, not bundled by webpack
+  externals: {
+    'serialport': 'commonjs2 serialport',
+    '@serialport/bindings-cpp': 'commonjs2 @serialport/bindings-cpp',
+  },
 };
