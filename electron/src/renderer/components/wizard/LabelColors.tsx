@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import type { GridKey } from '../../../shared/types';
 
 interface LabelColorsProps {
@@ -22,10 +22,16 @@ export function LabelColors({
   onActiveColorChange,
   onPressColorChange,
 }: LabelColorsProps) {
+  const previewTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const handleActiveColorChange = (hex: string) => {
     const color = hex.replace('#', '');
     onActiveColorChange(color);
-    window.keybow.previewLed(gridKey, color);
+
+    if (previewTimer.current) clearTimeout(previewTimer.current);
+    previewTimer.current = setTimeout(() => {
+      window.keybow.previewLed(gridKey, color);
+    }, 50);
   };
 
   return (

@@ -12,6 +12,8 @@ interface WizardPanelProps {
   existingAction?: KeyAction;
   defaultColor: string;
   profileNames: string[];
+  suggestions: any;
+  installedApps: Array<{ name: string; process: string; path: string }>;
   onSave: (key: GridKey, action: KeyAction) => void;
   onRemove: (key: GridKey) => void;
   onCancel: () => void;
@@ -24,6 +26,8 @@ export function WizardPanel({
   existingAction,
   defaultColor,
   profileNames,
+  suggestions,
+  installedApps,
   onSave,
   onRemove,
   onCancel,
@@ -167,10 +171,10 @@ export function WizardPanel({
           <ChooseAction selected={actionType} onSelect={handleActionSelect} />
         )}
         {step === 1 && actionType === 'app' && (
-          <ConfigureApp value={appTarget} onChange={setAppTarget} />
+          <ConfigureApp value={appTarget} onChange={setAppTarget} installedApps={installedApps} popularApps={suggestions?.apps ?? []} />
         )}
         {step === 1 && actionType === 'url' && (
-          <ConfigureUrl value={urlTarget} onChange={setUrlTarget} />
+          <ConfigureUrl value={urlTarget} onChange={setUrlTarget} urlCategories={suggestions?.urls ?? {}} />
         )}
         {step === 1 && actionType === 'profile_set' && (
           <ConfigureProfile value={profileTarget} profileNames={profileNames} onChange={setProfileTarget} />

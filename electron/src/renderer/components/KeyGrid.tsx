@@ -13,7 +13,7 @@ interface KeyGridProps {
   previewColor?: string;
 }
 
-export function KeyGrid({ profile, selectedKey, pressedKey, onSelectKey, previewLabel, previewColor }: KeyGridProps) {
+export const KeyGrid = React.memo(function KeyGrid({ profile, selectedKey, pressedKey, onSelectKey, previewLabel, previewColor }: KeyGridProps) {
   return (
     <div className="key-grid">
       {ROWS.map((row) => (
@@ -43,4 +43,4 @@ export function KeyGrid({ profile, selectedKey, pressedKey, onSelectKey, preview
       ))}
     </div>
   );
-}
+});

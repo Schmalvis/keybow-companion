@@ -8,6 +8,7 @@ interface UrlEntry {
 interface ConfigureUrlProps {
   value: string;
   onChange: (url: string) => void;
+  urlCategories: Record<string, UrlEntry[]>;
 }
 
 function isValidUrl(str: string): boolean {
@@ -19,20 +20,16 @@ function isValidUrl(str: string): boolean {
   }
 }
 
-export function ConfigureUrl({ value, onChange }: ConfigureUrlProps) {
-  const [categories, setCategories] = useState<Record<string, UrlEntry[]>>({});
-  const [activeCategory, setActiveCategory] = useState<string>('');
+export function ConfigureUrl({ value, onChange, urlCategories }: ConfigureUrlProps) {
+  const [activeCategory, setActiveCategory] = useState<string>(() => Object.keys(urlCategories)[0] ?? '');
   const [customUrl, setCustomUrl] = useState(value || '');
   const [touched, setTouched] = useState(false);
 
   useEffect(() => {
-    window.keybow.getSuggestions().then((data) => {
-      const urls = data.urls ?? {};
-      setCategories(urls);
-      const firstCategory = Object.keys(urls)[0] ?? '';
-      setActiveCategory(firstCategory);
-    });
-  }, []);
+    if (!activeCategory && Object.keys(urlCategories).length > 0) {
+      setActiveCategory(Object.keys(urlCategories)[0]);
+    }
+  }, [urlCategories, activeCategory]);
 
   useEffect(() => {
     setCustomUrl(value || '');
@@ -51,8 +48,8 @@ export function ConfigureUrl({ value, onChange }: ConfigureUrlProps) {
     }
   };
 
-  const categoryNames = Object.keys(categories);
-  const urlsInCategory = categories[activeCategory] ?? [];
+  const categoryNames = Object.keys(urlCategories);
+  const urlsInCategory = urlCategories[activeCategory] ?? [];
   const showError = touched && customUrl.length > 0 && !isValidUrl(customUrl);
 
   return (

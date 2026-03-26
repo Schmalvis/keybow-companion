@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import type { AppTarget } from '../../../shared/types';
 
 interface AppEntry {
@@ -10,17 +10,12 @@ interface AppEntry {
 interface ConfigureAppProps {
   value: AppTarget | null;
   onChange: (target: AppTarget) => void;
+  installedApps: AppEntry[];
+  popularApps: AppEntry[];
 }
 
-export function ConfigureApp({ value, onChange }: ConfigureAppProps) {
+export function ConfigureApp({ value, onChange, installedApps, popularApps }: ConfigureAppProps) {
   const [search, setSearch] = useState('');
-  const [installedApps, setInstalledApps] = useState<AppEntry[]>([]);
-  const [popularApps, setPopularApps] = useState<AppEntry[]>([]);
-
-  useEffect(() => {
-    window.keybow.getInstalledApps().then(setInstalledApps);
-    window.keybow.getSuggestions().then((data) => setPopularApps(data.apps ?? []));
-  }, []);
 
   const filtered = installedApps.filter(
     (app) => app.name.toLowerCase().includes(search.toLowerCase()),

@@ -31,6 +31,8 @@ function App() {
   const [connected, setConnected] = useState(false);
   const [pressedKey, setPressedKey] = useState<GridKey | null>(null);
   const [showTemplates, setShowTemplates] = useState(false);
+  const [suggestions, setSuggestions] = useState<any>(null);
+  const [installedApps, setInstalledApps] = useState<Array<{ name: string; process: string; path: string }>>([]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -42,6 +44,8 @@ function App() {
 
   useEffect(() => {
     window.keybow.getConfig().then(setConfig);
+    window.keybow.getSuggestions().then(setSuggestions);
+    window.keybow.getInstalledApps().then(setInstalledApps);
     window.keybow.onProfileChanged((name) => {
       setConfig((prev) => prev ? { ...prev, activeProfile: name } : prev);
     });
@@ -81,6 +85,8 @@ function App() {
             existingAction={activeProfile.keys[selectedKey]}
             defaultColor={activeProfile.defaultColor}
             profileNames={config.profileOrder}
+            suggestions={suggestions}
+            installedApps={installedApps}
             onSave={(key: GridKey, action: KeyAction) => {
               const updated = { ...config };
               updated.profiles[config.activeProfile] = {
