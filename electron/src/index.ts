@@ -1,4 +1,4 @@
-import { app, BrowserWindow, Tray, Menu, ipcMain, nativeImage } from 'electron';
+import { app, BrowserWindow, Tray, Menu, ipcMain, nativeImage, dialog } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs';
 import { SerialManager } from './main/serial';
@@ -8,6 +8,9 @@ import { AutoSwitcher } from './main/auto-switch';
 import { ActionExecutor } from './main/action-executor';
 import type { ProfileConfig, GridKey } from './shared/types';
 import { NativeHost } from './main/native-host';
+import { AppDetector } from './main/app-detector';
+import templates from './data/templates.json';
+import suggestions from './data/suggestions.json';
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (require('electron-squirrel-startup')) {
@@ -16,6 +19,8 @@ if (require('electron-squirrel-startup')) {
 
 const CONFIG_DIR = path.join(app.getPath('userData'));
 const CONFIG_PATH = path.join(CONFIG_DIR, 'profiles.json');
+
+const appDetector = new AppDetector();
 
 let mainWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
@@ -188,6 +193,34 @@ app.whenReady().then(() => {
     saveConfig(config);
     onProfileSwitch();
     return true;
+  });
+
+  // Scan for installed apps at startup (non-blocking)
+  appDetector.scan();
+
+  ipcMain.handle('get-installed-apps', async () => {
+    return appDetector.getApps();
+  });
+
+  ipcMain.handle('browse-for-app', async () => {
+    const result = await dialog.showOpenDialog({
+      title: 'Select Application',
+      filters: [{ name: 'Executables', extensions: ['exe'] }],
+      properties: ['openFile'],
+    });
+    if (result.canceled || result.filePaths.length === 0) return null;
+    const filePath = result.filePaths[0];
+    const exe = filePath.split('\\').pop() ?? '';
+    const process = exe.replace(/\.exe$/i, '');
+    const name = process;
+    return { name, process, path: filePath };
+  });
+
+  ipcMain.handle('get-templates', () => templates);
+  ipcMain.handle('get-suggestions', () => suggestions);
+
+  ipcMain.on('preview-led', (_event, key: string, color: string) => {
+    serial.sendLed(key as GridKey, color);
   });
 
   createWindow();
