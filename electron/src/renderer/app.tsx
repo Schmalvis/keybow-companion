@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import { KeyGrid } from './components/KeyGrid';
-import { KeyConfig } from './components/KeyConfig';
+import { WizardPanel } from './components/WizardPanel';
+import { TemplatePicker } from './components/TemplatePicker';
 import { ProfileBar } from './components/ProfileBar';
 import type { ProfileConfig, GridKey } from '../shared/types';
 import './styles/app.css';
+import './styles/wizard.css';
 
 declare global {
   interface Window {
@@ -14,6 +16,11 @@ declare global {
       onProfileChanged: (callback: (name: string) => void) => void;
       onDeviceStatus: (callback: (connected: boolean) => void) => void;
       onKeyEvent: (callback: (key: string, event: string) => void) => void;
+      getInstalledApps: () => Promise<Array<{ name: string; path: string }>>;
+      browseForApp: () => Promise<string | null>;
+      getTemplates: () => Promise<Array<{ id: string; name: string; description: string; keys: Record<string, unknown> }>>;
+      getSuggestions: (appPath: string) => Promise<Array<{ label: string; keys: string; action: string }>>;
+      previewLed: (key: string, color: string) => Promise<void>;
     };
   }
 }
@@ -23,6 +30,7 @@ function App() {
   const [selectedKey, setSelectedKey] = useState<GridKey | null>(null);
   const [connected, setConnected] = useState(false);
   const [pressedKey, setPressedKey] = useState<GridKey | null>(null);
+  const [showTemplates, setShowTemplates] = useState(false);
 
   useEffect(() => {
     window.keybow.getConfig().then(setConfig);
@@ -56,14 +64,15 @@ function App() {
           {connected ? 'Connected' : 'Disconnected'}
         </span>
       </header>
-      <ProfileBar config={config} onSave={handleSave} />
+      <ProfileBar config={config} onSave={handleSave} onOpenTemplates={() => setShowTemplates(true)} />
       <div className="main-content">
         <KeyGrid profile={activeProfile} selectedKey={selectedKey} pressedKey={pressedKey} onSelectKey={setSelectedKey} />
-        {selectedKey && (
-          <KeyConfig
+        {selectedKey ? (
+          <WizardPanel
             gridKey={selectedKey}
-            action={activeProfile.keys[selectedKey]}
+            existingAction={activeProfile.keys[selectedKey]}
             defaultColor={activeProfile.defaultColor}
+            profileNames={config.profileOrder}
             onSave={(key, action) => {
               const updated = { ...config };
               updated.profiles[config.activeProfile] = {
@@ -78,10 +87,27 @@ function App() {
               delete newKeys[key];
               updated.profiles[config.activeProfile] = { ...activeProfile, keys: newKeys };
               handleSave(updated);
+              setSelectedKey(null);
             }}
+            onCancel={() => setSelectedKey(null)}
           />
+        ) : (
+          <div className="wizard-empty">
+            <div className="wizard-empty-icon">👈</div>
+            <p>Click a key to configure it</p>
+            <p className="hint">or use <strong>Templates</strong> to set up the whole grid</p>
+          </div>
         )}
       </div>
+      {showTemplates && <TemplatePicker onClose={() => setShowTemplates(false)} onApply={(templateKeys) => {
+        const updated = { ...config };
+        updated.profiles[config.activeProfile] = {
+          ...activeProfile,
+          keys: { ...activeProfile.keys, ...templateKeys },
+        };
+        handleSave(updated);
+        setShowTemplates(false);
+      }} />}
     </div>
   );
 }

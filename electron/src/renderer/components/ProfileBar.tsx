@@ -4,9 +4,10 @@ import type { ProfileConfig } from '../../shared/types';
 interface ProfileBarProps {
   config: ProfileConfig;
   onSave: (config: ProfileConfig) => void;
+  onOpenTemplates: () => void;
 }
 
-export function ProfileBar({ config, onSave }: ProfileBarProps) {
+export function ProfileBar({ config, onSave, onOpenTemplates }: ProfileBarProps) {
   const [newName, setNewName] = useState('');
 
   const switchProfile = (name: string) => {
@@ -57,6 +58,9 @@ export function ProfileBar({ config, onSave }: ProfileBarProps) {
         <input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="New profile" onKeyDown={(e) => e.key === 'Enter' && addProfile()} />
         <button onClick={addProfile}>+</button>
       </div>
+      <button className="wizard-btn" style={{ marginLeft: 'auto' }} onClick={onOpenTemplates}>
+        📋 Templates
+      </button>
     </div>
   );
 }

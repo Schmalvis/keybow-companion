@@ -9,9 +9,11 @@ interface KeyGridProps {
   selectedKey: GridKey | null;
   pressedKey: GridKey | null;
   onSelectKey: (key: GridKey) => void;
+  previewLabel?: string;
+  previewColor?: string;
 }
 
-export function KeyGrid({ profile, selectedKey, pressedKey, onSelectKey }: KeyGridProps) {
+export function KeyGrid({ profile, selectedKey, pressedKey, onSelectKey, previewLabel, previewColor }: KeyGridProps) {
   return (
     <div className="key-grid">
       {ROWS.map((row) => (
@@ -19,18 +21,20 @@ export function KeyGrid({ profile, selectedKey, pressedKey, onSelectKey }: KeyGr
           {COLS.map((col) => {
             const gridKey = `${row}${col}` as GridKey;
             const action = profile.keys[gridKey];
-            const color = action?.activeColor ?? profile.defaultColor;
+            const storedColor = action?.activeColor ?? profile.defaultColor;
             const isSelected = selectedKey === gridKey;
             const isPressed = pressedKey === gridKey;
+            const displayColor = isSelected && previewColor ? previewColor : storedColor;
+            const displayLabel = isSelected && previewLabel !== undefined ? previewLabel : (action?.label ?? '');
             return (
               <button
                 key={gridKey}
-                className={`key-button ${isSelected ? 'selected' : ''} ${isPressed ? 'pressed' : ''}`}
-                style={{ backgroundColor: isPressed ? '#ffffff' : `#${color}` }}
+                className={`key-button ${isSelected ? 'selected configuring' : ''} ${isPressed ? 'pressed' : ''}`}
+                style={{ backgroundColor: isPressed ? '#ffffff' : `#${displayColor}` }}
                 onClick={() => onSelectKey(gridKey)}
                 title={action?.label ?? gridKey}
               >
-                <span className="key-label" style={isPressed ? { color: '#000' } : undefined}>{action?.label ?? ''}</span>
+                <span className="key-label" style={isPressed ? { color: '#000' } : undefined}>{displayLabel}</span>
                 <span className="key-id" style={isPressed ? { color: '#333' } : undefined}>{gridKey}</span>
               </button>
             );
