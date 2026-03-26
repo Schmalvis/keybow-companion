@@ -1,0 +1,43 @@
+{
+  "apps": [
+    { "name": "Visual Studio Code", "process": "Code", "path": "C:\\Users\\%USERNAME%\\AppData\\Local\\Programs\\Microsoft VS Code\\Code.exe", "icon": "code" },
+    { "name": "Slack", "process": "slack", "path": "C:\\Users\\%USERNAME%\\AppData\\Local\\slack\\slack.exe", "icon": "slack" },
+    { "name": "Spotify", "process": "Spotify", "path": "C:\\Users\\%USERNAME%\\AppData\\Roaming\\Spotify\\Spotify.exe", "icon": "spotify" },
+    { "name": "Discord", "process": "Discord", "path": "C:\\Users\\%USERNAME%\\AppData\\Local\\Discord\\Update.exe --processStart Discord.exe", "icon": "discord" },
+    { "name": "Windows Terminal", "process": "WindowsTerminal", "path": "wt.exe", "icon": "terminal" },
+    { "name": "File Explorer", "process": "explorer", "path": "C:\\Windows\\explorer.exe", "icon": "folder" },
+    { "name": "Notepad", "process": "Notepad", "path": "C:\\Windows\\System32\\notepad.exe", "icon": "notepad" },
+    { "name": "Google Chrome", "process": "chrome", "path": "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe", "icon": "chrome" },
+    { "name": "Firefox", "process": "firefox", "path": "C:\\Program Files\\Mozilla Firefox\\firefox.exe", "icon": "firefox" },
+    { "name": "OBS Studio", "process": "obs64", "path": "C:\\Program Files\\obs-studio\\bin\\64bit\\obs64.exe", "icon": "obs" }
+  ],
+  "urls": {
+    "Work": [
+      { "name": "Gmail", "url": "https://mail.google.com" },
+      { "name": "Google Calendar", "url": "https://calendar.google.com" },
+      { "name": "Slack Web", "url": "https://app.slack.com" },
+      { "name": "Microsoft Teams", "url": "https://teams.microsoft.com" },
+      { "name": "Notion", "url": "https://notion.so" },
+      { "name": "Google Drive", "url": "https://drive.google.com" }
+    ],
+    "Dev Tools": [
+      { "name": "GitHub", "url": "https://github.com" },
+      { "name": "GitLab", "url": "https://gitlab.com" },
+      { "name": "Stack Overflow", "url": "https://stackoverflow.com" },
+      { "name": "ChatGPT", "url": "https://chat.openai.com" },
+      { "name": "Claude", "url": "https://claude.ai" },
+      { "name": "npm", "url": "https://npmjs.com" }
+    ],
+    "Social": [
+      { "name": "YouTube", "url": "https://youtube.com" },
+      { "name": "Reddit", "url": "https://reddit.com" },
+      { "name": "Twitter / X", "url": "https://x.com" },
+      { "name": "LinkedIn", "url": "https://linkedin.com" }
+    ],
+    "Entertainment": [
+      { "name": "Netflix", "url": "https://netflix.com" },
+      { "name": "Twitch", "url": "https://twitch.tv" },
+      { "name": "Spotify Web", "url": "https://open.spotify.com" }
+    ]
+  }
+}
