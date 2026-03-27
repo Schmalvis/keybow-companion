@@ -280,4 +280,46 @@ mod tests {
         let _ = fs::remove_file(&path);
         let _ = fs::remove_dir(&dir);
     }
+
+    #[test]
+    fn deserializes_existing_electron_config() {
+        let json = r#"{
+            "version": 1,
+            "activeProfile": "Default",
+            "profileSwitchKey": "D4",
+            "profileOrder": ["Default"],
+            "autoSwitch": {},
+            "profiles": {
+                "Default": {
+                    "name": "Default",
+                    "defaultColor": "004488",
+                    "keys": {
+                        "A1": {
+                            "action": "app",
+                            "target": { "process": "Code", "path": "code" },
+                            "label": "VS Code",
+                            "activeColor": "2563EB"
+                        },
+                        "B1": {
+                            "action": "url",
+                            "target": "https://github.com",
+                            "label": "GitHub",
+                            "activeColor": "6E40C9"
+                        },
+                        "D4": {
+                            "action": "profile_cycle",
+                            "label": "Next Profile",
+                            "activeColor": "FF8800"
+                        }
+                    }
+                }
+            }
+        }"#;
+
+        let config: ProfileConfig = serde_json::from_str(json).expect("Should deserialize Electron config format");
+        assert_eq!(config.active_profile, "Default");
+        assert_eq!(config.profiles["Default"].keys["A1"].label, "VS Code");
+        assert_eq!(config.profiles["Default"].keys["B1"].label, "GitHub");
+        assert_eq!(config.profiles["Default"].keys["D4"].label, "Next Profile");
+    }
 }
