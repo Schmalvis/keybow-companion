@@ -16,7 +16,7 @@ import type { GridKey } from '../shared/types';
 
 export class SerialManager extends EventEmitter {
   private port: SerialPort | null = null;
-  private reconnectTimer: ReturnType<typeof setInterval> | null = null;
+  private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private pingTimer: ReturnType<typeof setInterval> | null = null;
   private awaitingPong = false;
 
@@ -109,11 +109,27 @@ export class SerialManager extends EventEmitter {
   private async autoDetect(): Promise<string | null> {
     try {
       const ports = await SerialPort.list();
-      log('[Serial] All ports:', ports.map(p => `${p.path} VID:${p.vendorId} PID:${p.productId}`));
-      const matches = ports.filter(p => {
+      log('[Serial] All ports:', ports.map(p =>
+        `${p.path} VID:${p.vendorId} PID:${p.productId} MFR:${p.manufacturer ?? ''} SN:${p.serialNumber ?? ''}`));
+
+      // Primary: match by known Keybow/RP2040 vendor IDs
+      let matches = ports.filter(p => {
         const vid = p.vendorId?.toUpperCase();
         return vid === '16D0' || vid === '2E8A';
       });
+
+      // Fallback: match by RP2040 product ID or manufacturer string
+      if (matches.length === 0) {
+        matches = ports.filter(p => {
+          const pid = p.productId?.toUpperCase();
+          const mfr = (p.manufacturer ?? '').toLowerCase();
+          return pid === '000A' || mfr.includes('raspberry pi') || mfr.includes('pimoroni');
+        });
+      }
+
+      // No last-resort fallback — Intel AMT and other non-Keybow ports
+      // must not be matched. The Keybow RP2040 always has a vendor ID.
+
       log('[Serial] Matches:', matches.map(p => p.path));
       // Pick the last (highest COM number) = data port
       return matches.length > 0 ? matches[matches.length - 1].path : null;
@@ -125,7 +141,7 @@ export class SerialManager extends EventEmitter {
 
   private scheduleReconnect(): void {
     if (this.reconnectTimer) return;
-    this.reconnectTimer = setInterval(() => {
+    this.reconnectTimer = setTimeout(() => {
       this.reconnectTimer = null;
       this.connect();
     }, 3000);

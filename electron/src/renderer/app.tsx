@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import { KeyGrid } from './components/KeyGrid';
-import { KeyConfig } from './components/KeyConfig';
+import { WizardPanel } from './components/wizard/WizardPanel';
+import { TemplatePicker } from './components/TemplatePicker';
 import { ProfileBar } from './components/ProfileBar';
-import type { ProfileConfig, GridKey } from '../shared/types';
+import type { ProfileConfig, GridKey, KeyAction } from '../shared/types';
 import './styles/app.css';
+import './styles/wizard.css';
 
 declare global {
   interface Window {
@@ -14,6 +16,11 @@ declare global {
       onProfileChanged: (callback: (name: string) => void) => void;
       onDeviceStatus: (callback: (connected: boolean) => void) => void;
       onKeyEvent: (callback: (key: string, event: string) => void) => void;
+      getInstalledApps: () => Promise<Array<{ name: string; process: string; path: string }>>;
+      browseForApp: () => Promise<{ name: string; process: string; path: string } | null>;
+      getTemplates: () => Promise<any>;
+      getSuggestions: () => Promise<any>;
+      previewLed: (key: string, color: string) => void;
     };
   }
 }
@@ -23,9 +30,22 @@ function App() {
   const [selectedKey, setSelectedKey] = useState<GridKey | null>(null);
   const [connected, setConnected] = useState(false);
   const [pressedKey, setPressedKey] = useState<GridKey | null>(null);
+  const [showTemplates, setShowTemplates] = useState(false);
+  const [suggestions, setSuggestions] = useState<any>(null);
+  const [installedApps, setInstalledApps] = useState<Array<{ name: string; process: string; path: string }>>([]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setSelectedKey(null);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   useEffect(() => {
     window.keybow.getConfig().then(setConfig);
+    window.keybow.getSuggestions().then(setSuggestions);
+    window.keybow.getInstalledApps().then(setInstalledApps);
     window.keybow.onProfileChanged((name) => {
       setConfig((prev) => prev ? { ...prev, activeProfile: name } : prev);
     });
@@ -56,15 +76,18 @@ function App() {
           {connected ? 'Connected' : 'Disconnected'}
         </span>
       </header>
-      <ProfileBar config={config} onSave={handleSave} />
+      <ProfileBar config={config} onSave={handleSave} onOpenTemplates={() => setShowTemplates(true)} />
       <div className="main-content">
         <KeyGrid profile={activeProfile} selectedKey={selectedKey} pressedKey={pressedKey} onSelectKey={setSelectedKey} />
-        {selectedKey && (
-          <KeyConfig
+        {selectedKey ? (
+          <WizardPanel
             gridKey={selectedKey}
-            action={activeProfile.keys[selectedKey]}
+            existingAction={activeProfile.keys[selectedKey]}
             defaultColor={activeProfile.defaultColor}
-            onSave={(key, action) => {
+            profileNames={config.profileOrder}
+            suggestions={suggestions}
+            installedApps={installedApps}
+            onSave={(key: GridKey, action: KeyAction) => {
               const updated = { ...config };
               updated.profiles[config.activeProfile] = {
                 ...activeProfile,
@@ -72,16 +95,31 @@ function App() {
               };
               handleSave(updated);
             }}
-            onRemove={(key) => {
+            onRemove={(key: GridKey) => {
               const updated = { ...config };
               const newKeys = { ...activeProfile.keys };
               delete newKeys[key];
               updated.profiles[config.activeProfile] = { ...activeProfile, keys: newKeys };
               handleSave(updated);
+              setSelectedKey(null);
             }}
+            onCancel={() => setSelectedKey(null)}
           />
+        ) : (
+          <div className="wizard-empty">
+            <div className="wizard-empty-icon">👈</div>
+            <p>Click a key to configure it</p>
+            <p className="hint">or use <strong>Templates</strong> to set up the whole grid</p>
+          </div>
         )}
       </div>
+      {showTemplates && (
+        <TemplatePicker
+          config={config}
+          onApply={handleSave}
+          onClose={() => setShowTemplates(false)}
+        />
+      )}
     </div>
   );
 }
