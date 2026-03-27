@@ -127,11 +127,8 @@ export class SerialManager extends EventEmitter {
         });
       }
 
-      // Last resort: if exactly one COM port exists, use it
-      if (matches.length === 0 && ports.length === 1) {
-        log('[Serial] No VID/PID match, but only one port available — using it');
-        matches = ports;
-      }
+      // No last-resort fallback — Intel AMT and other non-Keybow ports
+      // must not be matched. The Keybow RP2040 always has a vendor ID.
 
       log('[Serial] Matches:', matches.map(p => p.path));
       // Pick the last (highest COM number) = data port
