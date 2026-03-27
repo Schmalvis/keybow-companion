@@ -61,6 +61,7 @@ export function LabelColors({
           <input
             type="color"
             value={`#${activeColor}`}
+            onInput={(e) => handleActiveColorChange((e.target as HTMLInputElement).value)}
             onChange={(e) => handleActiveColorChange(e.target.value)}
           />
         </div>
@@ -69,6 +70,7 @@ export function LabelColors({
           <input
             type="color"
             value={`#${pressColor}`}
+            onInput={(e) => onPressColorChange((e.target as HTMLInputElement).value.replace('#', ''))}
             onChange={(e) => onPressColorChange(e.target.value.replace('#', ''))}
           />
         </div>
