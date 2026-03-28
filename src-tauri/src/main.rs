@@ -41,8 +41,8 @@ fn main() {
     let state = AppState {
         profiles: Mutex::new(profiles),
         serial: Mutex::new(serial),
-        templates: include_str!("../../electron/src/data/templates.json").to_string(),
-        suggestions: include_str!("../../electron/src/data/suggestions.json").to_string(),
+        templates: include_str!("../../src/data/templates.json").to_string(),
+        suggestions: include_str!("../../src/data/suggestions.json").to_string(),
     };
 
     tauri::Builder::default()
