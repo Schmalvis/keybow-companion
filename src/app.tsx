@@ -27,6 +27,7 @@ export function App() {
     keybow.getConfig().then(setConfig as any);
     keybow.getSuggestions().then(setSuggestions);
     keybow.getInstalledApps().then(setInstalledApps as any);
+    keybow.getDeviceStatus().then(setConnected);
     keybow.onProfileChanged((name) => {
       setConfig((prev) => prev ? { ...prev, activeProfile: name } : prev);
     });

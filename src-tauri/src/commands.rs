@@ -53,6 +53,12 @@ pub fn get_suggestions(state: State<AppState>) -> Result<serde_json::Value, Stri
 }
 
 #[tauri::command]
+pub fn get_device_status(state: State<AppState>) -> Result<bool, String> {
+    let serial = state.serial.lock().map_err(|e| e.to_string())?;
+    Ok(serial.is_connected())
+}
+
+#[tauri::command]
 pub fn preview_led(key: String, color: String, state: State<AppState>) -> Result<(), String> {
     let serial = state.serial.lock().map_err(|e| e.to_string())?;
     serial.send_led(&key, &color);

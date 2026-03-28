@@ -3,7 +3,6 @@
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
-use log::info;
 use tauri::Emitter;
 use tauri::Manager;
 
@@ -11,22 +10,32 @@ use keybow_companion::commands::{self, AppState};
 use keybow_companion::profiles::ProfileEngine;
 use keybow_companion::serial::{SerialEvent, SerialManager};
 
+fn debug_log(msg: &str) {
+    use std::io::Write;
+    let path = dirs::config_dir().unwrap().join("keybow-companion").join("tauri-debug.log");
+    let _ = std::fs::create_dir_all(path.parent().unwrap());
+    if let Ok(mut f) = std::fs::OpenOptions::new().create(true).append(true).open(&path) {
+        let _ = writeln!(f, "{}", msg);
+    }
+}
+
 fn main() {
-    env_logger::init();
+    debug_log("[Main] Starting Keybow Companion");
 
     // Load config from standard location
     let config_dir = dirs::config_dir()
         .expect("Could not determine config directory")
         .join("keybow-companion");
     let config_path = config_dir.join("profiles.json");
-    info!("[Main] Config path: {}", config_path.display());
+    debug_log(&format!("[Main] Config path: {}", config_path.display()));
 
     let profiles = ProfileEngine::load(config_path);
     let serial = SerialManager::new();
 
     // Try initial connect
-    if let Err(e) = serial.connect() {
-        info!("[Main] Initial serial connect failed (will retry): {}", e);
+    match serial.connect() {
+        Ok(()) => debug_log("[Main] Initial serial connect: SUCCESS"),
+        Err(e) => debug_log(&format!("[Main] Initial serial connect failed (will retry): {}", e)),
     }
 
     let state = AppState {
@@ -46,6 +55,7 @@ fn main() {
             commands::get_templates,
             commands::get_suggestions,
             commands::preview_led,
+            commands::get_device_status,
         ])
         .setup(|app| {
             let handle = app.handle().clone();
@@ -68,10 +78,11 @@ fn main() {
                             let serial = state.serial.lock().unwrap();
                             match serial.connect() {
                                 Ok(()) => {
-                                    info!("[Serial] Reconnected");
+                                    debug_log("[Serial] Reconnected!");
                                     let _ = handle.emit("device-status", true);
                                 }
-                                Err(_) => {
+                                Err(e) => {
+                                    debug_log(&format!("[Serial] Reconnect failed: {}", e));
                                     let _ = handle.emit("device-status", false);
                                 }
                             }
@@ -91,7 +102,7 @@ fn main() {
                         if let Some(event) = serial.handle_line(&line) {
                             match event {
                                 SerialEvent::Ready => {
-                                    info!("[Serial] Device READY — sending LED colors");
+                                    debug_log("[Serial] Device READY — sending LED colors");
                                     let profiles = state.profiles.lock().unwrap();
                                     let colors = profiles.get_all_key_colors();
                                     for (key, color) in &colors {
@@ -101,6 +112,7 @@ fn main() {
                                 }
                                 SerialEvent::KeyEvent(ke) => {
                                     let event_str = format!("{:?}", ke.event);
+                                    debug_log(&format!("[Serial] Key event: {} {}", ke.key, event_str));
                                     let _ = handle.emit(
                                         "key-event",
                                         serde_json::json!({
@@ -109,14 +121,11 @@ fn main() {
                                         }),
                                     );
                                 }
-                                SerialEvent::Pong => {
-                                    // Heartbeat received — device is alive
-                                }
+                                SerialEvent::Pong => {}
                                 SerialEvent::Connected | SerialEvent::Disconnected => {}
                             }
                         }
                     } else {
-                        // No data — short sleep to avoid busy-waiting
                         std::thread::sleep(Duration::from_millis(10));
                     }
                 }

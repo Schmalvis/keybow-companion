@@ -9,6 +9,7 @@ export const keybow = {
   getTemplates: () => invoke("get_templates"),
   getSuggestions: () => invoke("get_suggestions"),
   previewLed: (key: string, color: string) => invoke("preview_led", { key, color }),
+  getDeviceStatus: () => invoke<boolean>("get_device_status"),
   onProfileChanged: (cb: (name: string) => void) => {
     listen<string>("profile-changed", (e) => cb(e.payload));
   },
