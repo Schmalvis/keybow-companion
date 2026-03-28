@@ -121,6 +121,36 @@ impl SerialManager {
         self.write_bytes(b"PING\n");
     }
 
+    /// Read a single line from the serial port (blocking up to the port timeout).
+    /// Returns None if no data available or on timeout.
+    pub fn read_line(&self) -> Option<String> {
+        let mut port_guard = self.port.lock().unwrap();
+        let port = port_guard.as_mut()?;
+
+        let mut buf = [0u8; 1];
+        let mut line = Vec::new();
+
+        loop {
+            match std::io::Read::read(port, &mut buf) {
+                Ok(0) => break,
+                Ok(_) => {
+                    if buf[0] == b'\n' {
+                        break;
+                    }
+                    line.push(buf[0]);
+                }
+                Err(ref e) if e.kind() == std::io::ErrorKind::TimedOut => break,
+                Err(_) => return None,
+            }
+        }
+
+        if line.is_empty() {
+            return None;
+        }
+
+        String::from_utf8(line).ok()
+    }
+
     pub fn handle_line(&self, line: &str) -> Option<SerialEvent> {
         let trimmed = line.trim();
         if trimmed.is_empty() {

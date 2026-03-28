@@ -1811,6 +1811,7 @@ dependencies = [
 name = "keybow-companion"
 version = "0.1.0"
 dependencies = [
+ "dirs",
  "env_logger",
  "log",
  "open",
