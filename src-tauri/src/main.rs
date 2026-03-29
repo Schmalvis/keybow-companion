@@ -6,9 +6,11 @@ use std::time::{Duration, Instant};
 use tauri::Emitter;
 use tauri::Manager;
 
+use keybow_companion::app_switcher::AppSwitcher;
 use keybow_companion::commands::{self, AppState};
 use keybow_companion::profiles::ProfileEngine;
 use keybow_companion::serial::{SerialEvent, SerialManager};
+use keybow_companion::types::{ActionTarget, ActionType, KeyEventType};
 
 fn debug_log(msg: &str) {
     use std::io::Write;
@@ -120,6 +122,69 @@ fn main() {
                                             "event": event_str
                                         }),
                                     );
+
+                                    // Execute action on PRESS
+                                    if ke.event == KeyEventType::PRESS {
+                                        let profiles = state.profiles.lock().unwrap();
+                                        if let Some(action) = profiles.get_key_action(&ke.key).cloned() {
+                                            let key = ke.key.clone();
+                                            drop(profiles);
+                                            drop(serial);
+
+                                            match action.action {
+                                                ActionType::App => {
+                                                    if let Some(ActionTarget::App(ref target)) = action.target {
+                                                        let switcher = AppSwitcher::new();
+                                                        if let Err(e) = switcher.focus_or_launch(&target.process, &target.path) {
+                                                            debug_log(&format!("[Action] App launch failed: {}", e));
+                                                            let s = state.serial.lock().unwrap();
+                                                            s.send_led(&key, "FF0000");
+                                                            drop(s);
+                                                            std::thread::sleep(Duration::from_millis(500));
+                                                            let s = state.serial.lock().unwrap();
+                                                            let p = state.profiles.lock().unwrap();
+                                                            s.send_led(&key, &p.get_key_color(&key));
+                                                        }
+                                                    }
+                                                }
+                                                ActionType::Url => {
+                                                    if let Some(ActionTarget::Url(ref url)) = action.target {
+                                                        debug_log(&format!("[Action] Opening URL: {}", url));
+                                                        let _ = open::that(url);
+                                                    }
+                                                }
+                                                ActionType::ProfileCycle => {
+                                                    let mut profiles = state.profiles.lock().unwrap();
+                                                    profiles.cycle_profile();
+                                                    let colors = profiles.get_all_key_colors();
+                                                    let name = profiles.get_active_profile_name().to_string();
+                                                    drop(profiles);
+                                                    let serial = state.serial.lock().unwrap();
+                                                    for (k, c) in &colors {
+                                                        serial.send_led(k, c);
+                                                    }
+                                                    let _ = handle.emit("profile-changed", &name);
+                                                    debug_log(&format!("[Action] Cycled to profile: {}", name));
+                                                }
+                                                ActionType::ProfileSet => {
+                                                    if let Some(ActionTarget::Url(ref name)) = action.target {
+                                                        let mut profiles = state.profiles.lock().unwrap();
+                                                        profiles.switch_to_profile(name);
+                                                        let colors = profiles.get_all_key_colors();
+                                                        drop(profiles);
+                                                        let serial = state.serial.lock().unwrap();
+                                                        for (k, c) in &colors {
+                                                            serial.send_led(k, c);
+                                                        }
+                                                        let _ = handle.emit("profile-changed", name);
+                                                        debug_log(&format!("[Action] Switched to profile: {}", name));
+                                                    }
+                                                }
+                                            }
+                                            // Skip the rest of the loop iteration since we dropped serial
+                                            continue;
+                                        }
+                                    }
                                 }
                                 SerialEvent::Pong => {}
                                 SerialEvent::Connected | SerialEvent::Disconnected => {}
