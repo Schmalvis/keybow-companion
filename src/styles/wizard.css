@@ -1,5 +1,5 @@
 /* Wizard Panel */
-.wizard-panel { display: flex; flex-direction: column; height: 100%; padding: 1rem; }
+.wizard-panel { display: flex; flex-direction: column; flex: 1; min-height: 0; padding: 1rem; overflow: hidden; }
 .wizard-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
 .wizard-header h3 { margin: 0; font-size: 1rem; }
 .wizard-step-label { font-size: 0.8rem; color: #888; }
@@ -67,7 +67,7 @@
 .review-actions { display: flex; gap: 0.5rem; margin-top: 1rem; }
 
 /* Empty state */
-.wizard-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: #666; text-align: center; }
+.wizard-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; flex: 1; min-height: 0; color: #666; text-align: center; }
 .wizard-empty-icon { font-size: 2rem; margin-bottom: 0.5rem; }
 .wizard-empty p { margin: 0.25rem 0; font-size: 0.85rem; }
 .wizard-empty .hint { font-size: 0.75rem; color: #555; }
