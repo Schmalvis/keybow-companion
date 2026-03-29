@@ -36,7 +36,11 @@ fn main() {
 
     // Try initial connect
     match serial.connect() {
-        Ok(()) => debug_log("[Main] Initial serial connect: SUCCESS"),
+        Ok(()) => {
+            debug_log("[Main] Initial serial connect: SUCCESS");
+            serial.send_ping();
+            debug_log("[Main] Sent initial PING");
+        },
         Err(e) => debug_log(&format!("[Main] Initial serial connect failed (will retry): {}", e)),
     }
 
@@ -65,6 +69,7 @@ fn main() {
             // Background thread for serial polling
             std::thread::spawn(move || {
                 let mut reconnect_timer = Instant::now();
+                let mut ping_timer = Instant::now();
 
                 loop {
                     let state = handle.state::<AppState>();
@@ -100,6 +105,7 @@ fn main() {
                     };
 
                     if let Some(line) = line {
+                        debug_log(&format!("[Serial] Raw line: {:?}", line));
                         let serial = state.serial.lock().unwrap();
                         if let Some(event) = serial.handle_line(&line) {
                             match event {
@@ -126,7 +132,9 @@ fn main() {
                                     // Execute action on PRESS
                                     if ke.event == KeyEventType::PRESS {
                                         let profiles = state.profiles.lock().unwrap();
-                                        if let Some(action) = profiles.get_key_action(&ke.key).cloned() {
+                                        let action_opt = profiles.get_key_action(&ke.key).cloned();
+                                        debug_log(&format!("[Action] Key {} action: {:?}", ke.key, action_opt.as_ref().map(|a| &a.action)));
+                                        if let Some(action) = action_opt {
                                             let key = ke.key.clone();
                                             drop(profiles);
                                             drop(serial);
