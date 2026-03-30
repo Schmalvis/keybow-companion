@@ -1,8 +1,10 @@
 use std::ffi::OsString;
 use std::os::windows::ffi::OsStringExt;
+use windows::core::PWSTR;
 use windows::Win32::Foundation::{HWND, LPARAM};
-use windows::Win32::System::ProcessStatus::GetModuleFileNameExW;
-use windows::Win32::System::Threading::{OpenProcess, PROCESS_QUERY_INFORMATION, PROCESS_VM_READ};
+use windows::Win32::System::Threading::{
+    OpenProcess, QueryFullProcessImageNameW, PROCESS_NAME_WIN32, PROCESS_QUERY_LIMITED_INFORMATION,
+};
 use windows::Win32::UI::WindowsAndMessaging::{
     EnumWindows, GetForegroundWindow, GetWindowThreadProcessId, IsWindowVisible,
     SetForegroundWindow, ShowWindow, SW_RESTORE,
@@ -38,20 +40,21 @@ unsafe extern "system" fn enum_windows_proc(hwnd: HWND, lparam: LPARAM) -> windo
 fn get_process_name_for_pid(pid: u32) -> Option<String> {
     unsafe {
         let handle =
-            OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, false, pid).ok()?;
+            OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, false, pid).ok()?;
 
         let mut buf = [0u16; 260];
-        let len = GetModuleFileNameExW(Some(handle), None, &mut buf);
-        if len == 0 {
+        let mut size = buf.len() as u32;
+        let ok = QueryFullProcessImageNameW(handle, PROCESS_NAME_WIN32, PWSTR(buf.as_mut_ptr()), &mut size);
+        if ok.is_err() {
             return None;
         }
 
-        let path = OsString::from_wide(&buf[..len as usize]);
+        let path = OsString::from_wide(&buf[..size as usize]);
         let path_str = path.to_string_lossy().to_string();
 
-        // Extract just the filename
+        // Extract filename without extension (e.g. "Code" from "Code.exe")
         std::path::Path::new(&path_str)
-            .file_name()
+            .file_stem()
             .map(|n| n.to_string_lossy().to_string())
     }
 }
