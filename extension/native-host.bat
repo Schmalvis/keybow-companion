@@ -1,2 +1,2 @@
 @echo off
-node "%~dp0native-host.js"
+node "%~dp0native-host.cjs"
