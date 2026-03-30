@@ -5,9 +5,12 @@ use windows::Win32::Foundation::{HWND, LPARAM};
 use windows::Win32::System::Threading::{
     OpenProcess, QueryFullProcessImageNameW, PROCESS_NAME_WIN32, PROCESS_QUERY_LIMITED_INFORMATION,
 };
+use windows::Win32::UI::Input::KeyboardAndMouse::{
+    SendInput, INPUT, INPUT_KEYBOARD, KEYEVENTF_KEYUP, VK_MENU,
+};
 use windows::Win32::UI::WindowsAndMessaging::{
-    EnumWindows, GetForegroundWindow, GetWindowThreadProcessId, IsWindowVisible,
-    SetForegroundWindow, ShowWindow, SW_RESTORE,
+    BringWindowToTop, EnumWindows, GetForegroundWindow, GetWindowThreadProcessId,
+    IsWindowVisible, SetForegroundWindow, ShowWindow, SW_RESTORE,
 };
 
 pub struct AppSwitcher;
@@ -105,8 +108,21 @@ impl AppSwitcher {
 
         if let Some(hwnd) = ctx.found {
             unsafe {
+                // Simulate Alt key press to bypass foreground window restrictions
+                let mut input = INPUT {
+                    r#type: INPUT_KEYBOARD,
+                    ..std::mem::zeroed()
+                };
+                input.Anonymous.ki.wVk = VK_MENU;
+                SendInput(&[input], std::mem::size_of::<INPUT>() as i32);
+
                 let _ = ShowWindow(hwnd, SW_RESTORE);
                 let _ = SetForegroundWindow(hwnd);
+                BringWindowToTop(hwnd);
+
+                // Release Alt key
+                input.Anonymous.ki.dwFlags = KEYEVENTF_KEYUP;
+                SendInput(&[input], std::mem::size_of::<INPUT>() as i32);
             }
             true
         } else {
