@@ -17,6 +17,7 @@ interface WizardPanelProps {
   onSave: (key: GridKey, action: KeyAction) => void;
   onRemove: (key: GridKey) => void;
   onCancel: () => void;
+  onDirtyChange: (dirty: boolean) => void;
 }
 
 const STEP_COUNT = 4;
@@ -31,7 +32,9 @@ export function WizardPanel({
   onSave,
   onRemove,
   onCancel,
+  onDirtyChange,
 }: WizardPanelProps) {
+  const [isDirty, setIsDirty] = useState(false);
   const [step, setStep] = useState(existingAction ? 3 : 0);
   const [actionType, setActionType] = useState<ActionType | null>(existingAction?.action ?? null);
   const [appTarget, setAppTarget] = useState<AppTarget | null>(
@@ -52,6 +55,13 @@ export function WizardPanel({
   const [label, setLabel] = useState(existingAction?.label ?? '');
   const [activeColor, setActiveColor] = useState(existingAction?.activeColor ?? defaultColor);
   const [pressColor, setPressColor] = useState(existingAction?.pressColor ?? 'FFFFFF');
+
+  const markDirty = () => {
+    if (!isDirty) {
+      setIsDirty(true);
+      onDirtyChange(true);
+    }
+  };
 
   // Reset wizard when key changes
   useEffect(() => {
@@ -76,6 +86,8 @@ export function WizardPanel({
       } else {
         setProfileTarget('');
       }
+      setIsDirty(false);
+      onDirtyChange(false);
     } else {
       setStep(0);
       setActionType(null);
@@ -85,11 +97,14 @@ export function WizardPanel({
       setLabel('');
       setActiveColor(defaultColor);
       setPressColor('FFFFFF');
+      setIsDirty(false);
+      onDirtyChange(false);
     }
   }, [gridKey, existingAction, defaultColor]);
 
   const handleActionSelect = (type: ActionType) => {
     setActionType(type);
+    markDirty();
     if (type === 'profile_cycle') {
       setStep(2); // Skip target step
     } else {
@@ -151,6 +166,8 @@ export function WizardPanel({
     if (actionType === 'url') action.target = urlTarget;
     if (actionType === 'profile_set') action.target = profileTarget;
     onSave(gridKey, action);
+    setIsDirty(false);
+    onDirtyChange(false);
   };
 
   const handleEditStep = (targetStep: number) => {
@@ -171,13 +188,13 @@ export function WizardPanel({
           <ChooseAction selected={actionType} onSelect={handleActionSelect} />
         )}
         {step === 1 && actionType === 'app' && (
-          <ConfigureApp value={appTarget} onChange={setAppTarget} installedApps={installedApps} popularApps={suggestions?.apps ?? []} />
+          <ConfigureApp value={appTarget} onChange={(val) => { setAppTarget(val); markDirty(); }} installedApps={installedApps} popularApps={suggestions?.apps ?? []} />
         )}
         {step === 1 && actionType === 'url' && (
-          <ConfigureUrl value={urlTarget} onChange={setUrlTarget} urlCategories={suggestions?.urls ?? {}} />
+          <ConfigureUrl value={urlTarget} onChange={(val) => { setUrlTarget(val); markDirty(); }} urlCategories={suggestions?.urls ?? {}} />
         )}
         {step === 1 && actionType === 'profile_set' && (
-          <ConfigureProfile value={profileTarget} profileNames={profileNames} onChange={setProfileTarget} />
+          <ConfigureProfile value={profileTarget} profileNames={profileNames} onChange={(val) => { setProfileTarget(val); markDirty(); }} />
         )}
         {step === 2 && (
           <LabelColors
@@ -186,9 +203,9 @@ export function WizardPanel({
             activeColor={activeColor}
             pressColor={pressColor}
             suggestedLabel={suggestedLabel}
-            onLabelChange={setLabel}
-            onActiveColorChange={setActiveColor}
-            onPressColorChange={setPressColor}
+            onLabelChange={(val) => { setLabel(val); markDirty(); }}
+            onActiveColorChange={(val) => { setActiveColor(val); markDirty(); }}
+            onPressColorChange={(val) => { setPressColor(val); markDirty(); }}
           />
         )}
         {step === 3 && actionType && (
