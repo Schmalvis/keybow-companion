@@ -1,0 +1,10 @@
+pub mod types;
+pub mod protocol;
+pub mod profiles;
+pub mod serial;
+pub mod app_switcher;
+pub mod app_detector;
+pub mod auto_switch;
+pub mod ipc_server;
+pub mod action_executor;
+pub mod commands;

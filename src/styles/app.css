@@ -1,0 +1,40 @@
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body, #root { height: 100%; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #1a1a2e; color: #e0e0e0; }
+.app { padding: 20px; display: flex; flex-direction: column; height: 100%; }
+.app-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+.status { font-size: 14px; padding: 4px 12px; border-radius: 12px; }
+.status.connected { background: #00442244; color: #00cc66; }
+.status.disconnected { background: #44000044; color: #cc4444; }
+.profile-bar { display: flex; gap: 8px; margin-bottom: 20px; align-items: center; flex-wrap: wrap; }
+.profile-tab { display: flex; align-items: center; background: #16213e; border-radius: 8px; overflow: hidden; }
+.profile-tab.active { background: #0f3460; }
+.profile-name { background: none; border: none; color: #e0e0e0; padding: 8px 12px; cursor: pointer; }
+.profile-delete { background: none; border: none; color: #666; padding: 8px; cursor: pointer; }
+.profile-delete:hover { color: #cc4444; }
+.profile-add { display: flex; gap: 4px; }
+.profile-add input { background: #16213e; border: 1px solid #333; color: #e0e0e0; padding: 6px 10px; border-radius: 6px; width: 120px; }
+.profile-add button { background: #0f3460; border: none; color: #e0e0e0; padding: 6px 12px; border-radius: 6px; cursor: pointer; }
+.main-content { display: flex; gap: 24px; flex: 1; min-height: 0; }
+.key-grid { display: flex; flex-direction: column; gap: 8px; }
+.key-row { display: flex; gap: 8px; }
+.key-button { width: 80px; height: 80px; border: 2px solid #333; border-radius: 10px; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: border-color 0.2s; }
+.key-button.selected { border-color: #fff; }
+.key-button:hover { border-color: #888; }
+.key-button.pressed { border-color: #fff; box-shadow: 0 0 12px 4px rgba(255,255,255,0.6); transform: scale(0.95); }
+.key-label { font-size: 12px; font-weight: 600; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.8); }
+.key-id { font-size: 10px; color: rgba(255,255,255,0.6); margin-top: 4px; }
+.key-config { background: #16213e; padding: 20px; border-radius: 12px; min-width: 300px; }
+.key-config h3 { margin-bottom: 16px; }
+.field { margin-bottom: 12px; }
+.field label { display: block; font-size: 12px; color: #888; margin-bottom: 4px; }
+.field input, .field select { width: 100%; background: #1a1a2e; border: 1px solid #333; color: #e0e0e0; padding: 8px; border-radius: 6px; }
+.color-fields { display: flex; gap: 12px; }
+.color-fields .field { flex: 1; }
+.color-fields input[type="color"] { height: 40px; padding: 2px; cursor: pointer; }
+.actions { display: flex; gap: 8px; margin-top: 16px; }
+.save-btn { background: #0f3460; border: none; color: #e0e0e0; padding: 8px 20px; border-radius: 6px; cursor: pointer; }
+.save-btn:hover { background: #1a4a80; }
+.remove-btn { background: none; border: 1px solid #333; color: #888; padding: 8px 20px; border-radius: 6px; cursor: pointer; }
+.remove-btn:hover { border-color: #cc4444; color: #cc4444; }
+.loading { padding: 40px; text-align: center; color: #888; }
