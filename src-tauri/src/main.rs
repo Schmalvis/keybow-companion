@@ -199,6 +199,12 @@ fn main() {
                             }
                         }
                     } else {
+                        // Send periodic PING to keep connection alive
+                        if ping_timer.elapsed() >= Duration::from_secs(5) {
+                            ping_timer = Instant::now();
+                            let serial = state.serial.lock().unwrap();
+                            serial.send_ping();
+                        }
                         std::thread::sleep(Duration::from_millis(10));
                     }
                 }

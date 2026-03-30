@@ -112,10 +112,26 @@ impl AppSwitcher {
     }
 
     fn launch(&self, exe_path: &str) -> Result<(), String> {
-        std::process::Command::new(exe_path)
+        let expanded = Self::expand_env_vars(exe_path);
+        std::process::Command::new(&expanded)
             .spawn()
-            .map_err(|e| format!("Failed to launch '{}': {}", exe_path, e))?;
+            .map_err(|e| format!("Failed to launch '{}': {}", expanded, e))?;
         Ok(())
+    }
+
+    /// Expand %VAR% environment variables in a path string
+    fn expand_env_vars(path: &str) -> String {
+        let mut result = path.to_string();
+        while let Some(start) = result.find('%') {
+            if let Some(end) = result[start + 1..].find('%') {
+                let var_name = &result[start + 1..start + 1 + end];
+                let replacement = std::env::var(var_name).unwrap_or_default();
+                result = format!("{}{}{}", &result[..start], replacement, &result[start + 2 + end..]);
+            } else {
+                break;
+            }
+        }
+        result
     }
 }
 
