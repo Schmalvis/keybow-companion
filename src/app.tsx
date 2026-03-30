@@ -63,6 +63,23 @@ export function App() {
     await keybow.saveConfig(updated);
   };
 
+  const handleCreateProfile = async (name: string) => {
+    const updated: ProfileConfig = {
+      ...config!,
+      profileOrder: [...config!.profileOrder, name],
+      profiles: {
+        ...config!.profiles,
+        [name]: {
+          name,
+          defaultColor: '0000FF',
+          keys: {},
+        },
+      },
+    };
+    setConfig(updated);
+    await keybow.saveConfig(updated);
+  };
+
   return (
     <div className="app">
       <header className="app-header">
@@ -91,6 +108,7 @@ export function App() {
               handleSave(updated);
             }}
             onDirtyChange={setWizardDirty}
+            onCreateProfile={handleCreateProfile}
             onRemove={(key: GridKey) => {
               const updated = { ...config };
               const newKeys = { ...activeProfile.keys };

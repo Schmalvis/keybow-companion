@@ -18,6 +18,7 @@ interface WizardPanelProps {
   onRemove: (key: GridKey) => void;
   onCancel: () => void;
   onDirtyChange: (dirty: boolean) => void;
+  onCreateProfile: (name: string) => Promise<void>;
 }
 
 const STEP_COUNT = 4;
@@ -33,6 +34,7 @@ export function WizardPanel({
   onRemove,
   onCancel,
   onDirtyChange,
+  onCreateProfile,
 }: WizardPanelProps) {
   const isDirtyRef = useRef(false);
   const [isDirty, setIsDirty] = useState(false);
@@ -199,7 +201,7 @@ export function WizardPanel({
           <ConfigureUrl value={urlTarget} onChange={(val) => { setUrlTarget(val); markDirty(); }} urlCategories={suggestions?.urls ?? {}} />
         )}
         {step === 1 && actionType === 'profile_set' && (
-          <ConfigureProfile value={profileTarget} profileNames={profileNames} onChange={(val) => { setProfileTarget(val); markDirty(); }} />
+          <ConfigureProfile value={profileTarget} profileNames={profileNames} onChange={(val) => { setProfileTarget(val); markDirty(); }} onCreateProfile={onCreateProfile} />
         )}
         {step === 2 && (
           <LabelColors
