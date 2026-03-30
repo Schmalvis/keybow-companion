@@ -14,10 +14,12 @@ export function ConfigureProfile({ value, profileNames, onChange, onCreateProfil
   const [showModal, setShowModal] = useState(false);
   const [newName, setNewName] = useState('');
   const [creating, setCreating] = useState(false);
+  const [nameError, setNameError] = useState('');
 
   const handleSelectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     if (e.target.value === NEW_PROFILE_SENTINEL) {
       setNewName('');
+      setNameError('');
       setShowModal(true);
     } else {
       onChange(e.target.value);
@@ -27,11 +29,21 @@ export function ConfigureProfile({ value, profileNames, onChange, onCreateProfil
   const handleCreate = async () => {
     const trimmed = newName.trim();
     if (!trimmed) return;
+    if (profileNames.includes(trimmed)) {
+      setNameError(`A profile named "${trimmed}" already exists`);
+      return;
+    }
+    setNameError('');
     setCreating(true);
-    await onCreateProfile(trimmed);
-    onChange(trimmed);
-    setShowModal(false);
-    setCreating(false);
+    try {
+      await onCreateProfile(trimmed);
+      onChange(trimmed);
+      setShowModal(false);
+    } catch {
+      setNameError('Failed to create profile — please try again');
+    } finally {
+      setCreating(false);
+    }
   };
 
   return (
@@ -71,9 +83,10 @@ export function ConfigureProfile({ value, profileNames, onChange, onCreateProfil
             placeholder="Profile name"
             value={newName}
             autoFocus
-            onChange={(e) => setNewName(e.target.value)}
+            onChange={(e) => { setNewName(e.target.value); setNameError(''); }}
             onKeyDown={(e) => { if (e.key === 'Enter') handleCreate(); }}
           />
+          {nameError && <p style={{ color: 'var(--danger, #c0392b)', margin: '4px 0 0', fontSize: '0.8rem' }}>{nameError}</p>}
         </Modal>
       )}
     </div>
