@@ -1,8 +1,6 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use std::io::{BufRead, BufReader, Write as IoWrite};
-use std::net::TcpStream;
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 use tauri::Emitter;
@@ -24,42 +22,18 @@ fn debug_log(msg: &str) {
     }
 }
 
-/// Try to focus/open a URL via the browser extension bridge.
-/// Returns true if the extension handled it.
-fn try_extension_url(url: &str) -> bool {
-    let request = serde_json::json!({
-        "action": "focusOrOpen",
-        "url": url,
-    });
-    let msg = format!("{}\n", request);
-
-    // Try to connect to the IPC server as a client and send the request
-    // The native-host.js bridge should be connected and will relay to the extension
-    match TcpStream::connect_timeout(
-        &"127.0.0.1:23847".parse().unwrap(),
-        Duration::from_millis(500),
-    ) {
-        Ok(mut stream) => {
-            let _ = stream.set_read_timeout(Some(Duration::from_secs(2)));
-            if stream.write_all(msg.as_bytes()).is_err() {
-                return false;
-            }
-            let _ = stream.flush();
-
-            // Wait for a response
-            let mut reader = BufReader::new(&stream);
-            let mut response = String::new();
-            if reader.read_line(&mut response).is_ok() && !response.is_empty() {
-                if let Ok(val) = serde_json::from_str::<serde_json::Value>(&response) {
-                    if val.get("success").and_then(|v| v.as_bool()) == Some(true) {
-                        debug_log(&format!("[Action] Extension handled URL: {}", url));
-                        return true;
-                    }
-                }
-            }
-            false
-        }
-        Err(_) => false,
+/// Open a URL via the browser extension (broadcast through IPC) or fall back to open::that.
+fn open_url(url: &str, ipc: &std::sync::Arc<IpcServer>) {
+    if ipc.has_clients() {
+        let request = serde_json::json!({
+            "action": "focusOrOpen",
+            "url": url,
+        });
+        ipc.broadcast(&request);
+        debug_log(&format!("[Action] Sent focusOrOpen to extension for {}", url));
+    } else {
+        debug_log(&format!("[Action] No extension connected, opening via default browser: {}", url));
+        let _ = open::that(url);
     }
 }
 
@@ -87,13 +61,20 @@ fn main() {
     }
 
     // Start IPC server for browser extension bridge
-    std::thread::spawn(|| {
+    let ipc_server = std::sync::Arc::new(IpcServer::new());
+    let ipc_for_thread = ipc_server.clone();
+    std::thread::spawn(move || {
         let rt = tokio::runtime::Runtime::new().expect("Failed to create tokio runtime");
         rt.block_on(async {
-            let server = IpcServer::new();
+            let server = ipc_for_thread;
             debug_log("[IPC] Starting TCP server on 127.0.0.1:23847");
-            match server.start(|msg| {
+            let server_for_cb = server.clone();
+            match server.start(move |msg| {
                 debug_log(&format!("[IPC] Received: {}", msg));
+                // Broadcast focusOrOpen requests to all clients (native host bridge)
+                if msg.get("action").and_then(|v| v.as_str()) == Some("focusOrOpen") {
+                    server_for_cb.broadcast(&msg);
+                }
             }).await {
                 Ok(addr) => debug_log(&format!("[IPC] Listening on {}", addr)),
                 Err(e) => debug_log(&format!("[IPC] Failed to start: {}", e)),
@@ -108,6 +89,7 @@ fn main() {
     let state = AppState {
         profiles: Mutex::new(profiles),
         serial: Mutex::new(serial),
+        ipc: ipc_server.clone(),
         templates: include_str!("../../src/data/templates.json").to_string(),
         suggestions: include_str!("../../src/data/suggestions.json").to_string(),
     };
@@ -216,11 +198,7 @@ fn main() {
                                                 }
                                                 ActionType::Url => {
                                                     if let Some(ActionTarget::Url(ref url)) = action.target {
-                                                        debug_log(&format!("[Action] URL: trying extension first for {}", url));
-                                                        if !try_extension_url(url) {
-                                                            debug_log("[Action] Extension not available, falling back to open::that");
-                                                            let _ = open::that(url);
-                                                        }
+                                                        open_url(url, &state.ipc);
                                                     }
                                                 }
                                                 ActionType::ProfileCycle => {

@@ -1,6 +1,7 @@
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 use tauri::State;
 use crate::app_detector::{detect_installed_apps, DetectedApp};
+use crate::ipc_server::IpcServer;
 use crate::profiles::ProfileEngine;
 use crate::serial::SerialManager;
 use crate::types::ProfileConfig;
@@ -8,6 +9,7 @@ use crate::types::ProfileConfig;
 pub struct AppState {
     pub profiles: Mutex<ProfileEngine>,
     pub serial: Mutex<SerialManager>,
+    pub ipc: Arc<IpcServer>,
     pub templates: String,
     pub suggestions: String,
 }

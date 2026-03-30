@@ -129,6 +129,11 @@ impl IpcServer {
         let _ = self.tx.send(msg);
     }
 
+    /// Returns true if at least one client is connected (subscribed to broadcasts).
+    pub fn has_clients(&self) -> bool {
+        self.tx.receiver_count() > 0
+    }
+
     /// Stop the IPC server.
     pub async fn stop(&self) {
         let mut guard = self.shutdown.lock().await;
