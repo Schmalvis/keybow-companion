@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import type { GridKey, ActionType, KeyAction, AppTarget } from '../../types';
 import { ChooseAction } from './ChooseAction';
 import { ConfigureApp } from './ConfigureApp';
@@ -34,6 +34,7 @@ export function WizardPanel({
   onCancel,
   onDirtyChange,
 }: WizardPanelProps) {
+  const isDirtyRef = useRef(false);
   const [isDirty, setIsDirty] = useState(false);
   const [step, setStep] = useState(existingAction ? 3 : 0);
   const [actionType, setActionType] = useState<ActionType | null>(existingAction?.action ?? null);
@@ -57,7 +58,8 @@ export function WizardPanel({
   const [pressColor, setPressColor] = useState(existingAction?.pressColor ?? 'FFFFFF');
 
   const markDirty = () => {
-    if (!isDirty) {
+    if (!isDirtyRef.current) {
+      isDirtyRef.current = true;
       setIsDirty(true);
       onDirtyChange(true);
     }
@@ -86,6 +88,7 @@ export function WizardPanel({
       } else {
         setProfileTarget('');
       }
+      isDirtyRef.current = false;
       setIsDirty(false);
       onDirtyChange(false);
     } else {
@@ -97,6 +100,7 @@ export function WizardPanel({
       setLabel('');
       setActiveColor(defaultColor);
       setPressColor('FFFFFF');
+      isDirtyRef.current = false;
       setIsDirty(false);
       onDirtyChange(false);
     }
@@ -166,6 +170,7 @@ export function WizardPanel({
     if (actionType === 'url') action.target = urlTarget;
     if (actionType === 'profile_set') action.target = profileTarget;
     onSave(gridKey, action);
+    isDirtyRef.current = false;
     setIsDirty(false);
     onDirtyChange(false);
   };

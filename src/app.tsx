@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { KeyGrid } from './components/KeyGrid';
 import { WizardPanel } from './components/wizard/WizardPanel';
 import { TemplatePicker } from './components/TemplatePicker';
@@ -16,26 +16,25 @@ export function App() {
   const [suggestions, setSuggestions] = useState<any>(null);
   const [installedApps, setInstalledApps] = useState<Array<{ name: string; process: string; path: string }>>([]);
   const [wizardDirty, setWizardDirty] = useState(false);
-  const [pendingKey, setPendingKey] = useState<GridKey | null>(null);
+  const [pendingKey, setPendingKey] = useState<GridKey | null | undefined>(undefined);
 
-  const handleSelectKey = (key: GridKey | null) => {
+  const handleSelectKey = useCallback((key: GridKey | null) => {
     if (wizardDirty && key !== selectedKey) {
-      setPendingKey(key);
+      setPendingKey(key);  // null means "close panel", a GridKey means "switch to key"
     } else {
       setSelectedKey(key);
     }
-  };
+  }, [wizardDirty, selectedKey]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        setWizardDirty(false);
-        setSelectedKey(null);
+        handleSelectKey(null);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [handleSelectKey]);
 
   useEffect(() => {
     keybow.getConfig().then(setConfig as any);
@@ -121,27 +120,30 @@ export function App() {
           onClose={() => setShowTemplates(false)}
         />
       )}
-      {pendingKey !== null && wizardDirty && (
+      {pendingKey !== undefined && wizardDirty && (
         <Modal
           title="Unsaved Changes"
-          onClose={() => setPendingKey(null)}
+          onClose={() => setPendingKey(undefined)}
           buttons={[
             {
               label: 'Keep Editing',
-              onClick: () => setPendingKey(null),
+              onClick: () => setPendingKey(undefined),
             },
             {
               label: 'Discard Changes',
               variant: 'danger',
               onClick: () => {
                 setWizardDirty(false);
-                setSelectedKey(pendingKey);
-                setPendingKey(null);
+                setSelectedKey(pendingKey);  // null closes panel, GridKey switches to it
+                setPendingKey(undefined);
               },
             },
           ]}
         >
-          You have unsaved changes on key <strong>{selectedKey}</strong>. Discard them and switch to key <strong>{pendingKey}</strong>?
+          {pendingKey
+            ? <>You have unsaved changes on key <strong>{selectedKey}</strong>. Discard them and switch to key <strong>{pendingKey}</strong>?</>
+            : <>You have unsaved changes on key <strong>{selectedKey}</strong>. Discard them and close the panel?</>
+          }
         </Modal>
       )}
     </div>
