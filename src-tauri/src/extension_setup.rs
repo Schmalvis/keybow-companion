@@ -12,9 +12,11 @@ pub fn ensure_extension_installed(app: &AppHandle) -> Result<bool, String> {
 
     let manifest_dest = data_dir.join("native-messaging.json");
     let host_dest = data_dir.join("native-host.exe");
+    // Sentinel written only after a fully successful install; guards against
+    // partial installs (files copied but registry key not yet written).
+    let sentinel = data_dir.join(".extension_installed");
 
-    // Already installed — skip
-    if manifest_dest.exists() && host_dest.exists() {
+    if sentinel.exists() {
         return Ok(false);
     }
 
@@ -39,6 +41,10 @@ pub fn ensure_extension_installed(app: &AppHandle) -> Result<bool, String> {
 
     // Write Chrome registry key
     write_registry_key(&manifest_dest.to_string_lossy())?;
+
+    // Sentinel — written last; presence means install completed fully
+    std::fs::write(&sentinel, b"")
+        .map_err(|e| format!("write install sentinel: {}", e))?;
 
     Ok(true)
 }

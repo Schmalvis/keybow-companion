@@ -6,7 +6,7 @@
     "frontendDist": "../dist",
     "devUrl": "http://localhost:5173",
     "beforeDevCommand": "npm run dev",
-    "beforeBuildCommand": "npm run build"
+    "beforeBuildCommand": "npm run build && cargo build --release --bin native-host --manifest-path src-tauri/Cargo.toml"
   },
   "app": {
     "withGlobalTauri": true,

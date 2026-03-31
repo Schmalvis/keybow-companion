@@ -21,7 +21,7 @@ export function ExtensionSetupModal({ open, onClose }: Props) {
           <li>Click <strong>Load unpacked</strong></li>
           <li>
             Navigate to{' '}
-            <code>%LocalAppData%\Keybow Companion\extension</code>{' '}
+            <code>%LocalAppData%\com.keybow.companion\extension</code>{' '}
             and click <strong>Select Folder</strong>
           </li>
           <li>Done — the banner will disappear automatically once connected</li>
