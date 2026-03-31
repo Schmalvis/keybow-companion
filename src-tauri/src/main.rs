@@ -67,31 +67,7 @@ fn main() {
         Err(e) => debug_log(&format!("[Main] Initial serial connect failed (will retry): {}", e)),
     }
 
-    // Start IPC server for browser extension bridge
     let ipc_server = std::sync::Arc::new(IpcServer::new());
-    let ipc_for_thread = ipc_server.clone();
-    std::thread::spawn(move || {
-        let rt = tokio::runtime::Runtime::new().expect("Failed to create tokio runtime");
-        rt.block_on(async {
-            let server = ipc_for_thread;
-            debug_log("[IPC] Starting TCP server on 127.0.0.1:23847");
-            let server_for_cb = server.clone();
-            match server.start(move |msg| {
-                debug_log(&format!("[IPC] Received: {}", msg));
-                // Broadcast focusOrOpen requests to all clients (native host bridge)
-                if msg.get("action").and_then(|v| v.as_str()) == Some("focusOrOpen") {
-                    server_for_cb.broadcast(&msg);
-                }
-            }).await {
-                Ok(addr) => debug_log(&format!("[IPC] Listening on {}", addr)),
-                Err(e) => debug_log(&format!("[IPC] Failed to start: {}", e)),
-            }
-            // Keep the runtime alive
-            loop {
-                tokio::time::sleep(Duration::from_secs(3600)).await;
-            }
-        });
-    });
 
     let state = AppState {
         profiles: Mutex::new(profiles),
@@ -326,12 +302,10 @@ fn main() {
 
             // Start IPC server and wire extension connection status
             let ipc_handle = app.handle().clone();
-            let ipc = IpcServer::new();
+            let ipc = app.state::<AppState>().ipc.clone();
             tauri::async_runtime::spawn(async move {
                 ipc.start(
-                    |_msg| {
-                        // URL open messages are handled by action_executor (not yet in this branch)
-                    },
+                    |_msg| {},
                     move |connected| {
                         let state = ipc_handle.state::<AppState>();
                         state.extension_connected.store(connected, Ordering::Relaxed);
