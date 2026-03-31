@@ -21,17 +21,19 @@ impl IpcServer {
     }
 
     /// Start the IPC server on the default address.
-    pub async fn start<F>(&self, on_message: F) -> Result<std::net::SocketAddr, String>
+    pub async fn start<F, G>(&self, on_message: F, on_client_change: G) -> Result<std::net::SocketAddr, String>
     where
         F: Fn(serde_json::Value) + Send + Sync + 'static,
+        G: Fn(bool) + Send + Sync + 'static,
     {
-        self.start_on(IPC_ADDR, on_message).await
+        self.start_on(IPC_ADDR, on_message, on_client_change).await
     }
 
     /// Start the IPC server on a custom address. Returns the bound address.
-    pub async fn start_on<F>(&self, addr: &str, on_message: F) -> Result<std::net::SocketAddr, String>
+    pub async fn start_on<F, G>(&self, addr: &str, on_message: F, on_client_change: G) -> Result<std::net::SocketAddr, String>
     where
         F: Fn(serde_json::Value) + Send + Sync + 'static,
+        G: Fn(bool) + Send + Sync + 'static,
     {
         let listener = TcpListener::bind(addr)
             .await
@@ -50,6 +52,7 @@ impl IpcServer {
 
         let tx = self.tx.clone();
         let on_message = Arc::new(on_message);
+        let on_client_change = Arc::new(on_client_change);
 
         tokio::spawn(async move {
             loop {
@@ -58,9 +61,11 @@ impl IpcServer {
                         match accept_result {
                             Ok((stream, addr)) => {
                                 log::info!("IPC client connected: {}", addr);
+                                on_client_change(true);
                                 let tx = tx.clone();
                                 let mut rx = tx.subscribe();
                                 let on_message = on_message.clone();
+                                let on_client_change = on_client_change.clone();
 
                                 tokio::spawn(async move {
                                     let (reader, writer) = stream.into_split();
@@ -104,6 +109,7 @@ impl IpcServer {
 
                                     write_task.abort();
                                     log::info!("IPC client disconnected: {}", addr);
+                                    on_client_change(false);
                                 });
                             }
                             Err(e) => {
@@ -164,7 +170,7 @@ mod tests {
     #[tokio::test]
     async fn server_starts_and_stops() {
         let server = IpcServer::new();
-        let addr = server.start_on("127.0.0.1:0", |_| {}).await.unwrap();
+        let addr = server.start_on("127.0.0.1:0", |_| {}, |_| {}).await.unwrap();
 
         tokio::time::sleep(std::time::Duration::from_millis(50)).await;
 
@@ -178,7 +184,7 @@ mod tests {
     #[tokio::test]
     async fn client_receives_broadcast() {
         let server = IpcServer::new();
-        let addr = server.start_on("127.0.0.1:0", |_| {}).await.unwrap();
+        let addr = server.start_on("127.0.0.1:0", |_| {}, |_| {}).await.unwrap();
         tokio::time::sleep(std::time::Duration::from_millis(50)).await;
 
         let stream = TcpStream::connect(addr).await.unwrap();
@@ -213,7 +219,7 @@ mod tests {
         let addr = server
             .start_on("127.0.0.1:0", move |_| {
                 counter_clone.fetch_add(1, Ordering::SeqCst);
-            })
+            }, |_| {})
             .await
             .unwrap();
         tokio::time::sleep(std::time::Duration::from_millis(50)).await;
@@ -232,5 +238,37 @@ mod tests {
 
         server.stop().await;
         tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+    }
+
+    #[tokio::test]
+    async fn client_change_callback_fires_on_connect_and_disconnect() {
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        let connect_count = Arc::new(AtomicUsize::new(0));
+        let disconnect_count = Arc::new(AtomicUsize::new(0));
+        let cc = connect_count.clone();
+        let dc = disconnect_count.clone();
+
+        let server = IpcServer::new();
+        let addr = server
+            .start_on("127.0.0.1:0", |_| {}, move |connected| {
+                if connected {
+                    cc.fetch_add(1, Ordering::SeqCst);
+                } else {
+                    dc.fetch_add(1, Ordering::SeqCst);
+                }
+            })
+            .await
+            .unwrap();
+        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+
+        let stream = TcpStream::connect(addr).await.unwrap();
+        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+        assert_eq!(connect_count.load(Ordering::SeqCst), 1);
+
+        drop(stream);
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+        assert_eq!(disconnect_count.load(Ordering::SeqCst), 1);
+
+        server.stop().await;
     }
 }
