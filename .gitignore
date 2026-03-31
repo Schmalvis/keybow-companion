@@ -3,3 +3,7 @@
 src-tauri/target/
 node_modules/
 dist/
+
+extension-key.pem
+extension-pubkey.der
+extension-pubkey-b64.txt

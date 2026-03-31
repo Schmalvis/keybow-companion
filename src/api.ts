@@ -25,4 +25,8 @@ export const keybow = {
       }
     });
   },
+  getExtensionStatus: () => invoke<boolean>("get_extension_status"),
+  onExtensionStatus: (cb: (connected: boolean) => void) => {
+    listen<boolean>("extension-status", (e) => cb(e.payload));
+  },
 };

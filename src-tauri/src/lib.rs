@@ -8,3 +8,4 @@ pub mod auto_switch;
 pub mod ipc_server;
 pub mod action_executor;
 pub mod commands;
+pub mod extension_setup;

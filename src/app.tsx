@@ -4,6 +4,7 @@ import { WizardPanel } from './components/wizard/WizardPanel';
 import { TemplatePicker } from './components/TemplatePicker';
 import { ProfileBar } from './components/ProfileBar';
 import { Modal } from './components/Modal';
+import { ExtensionSetupModal } from './components/ExtensionSetupModal';
 import { keybow } from './api';
 import type { ProfileConfig, GridKey, KeyAction } from './types';
 
@@ -11,6 +12,9 @@ export function App() {
   const [config, setConfig] = useState<ProfileConfig | null>(null);
   const [selectedKey, setSelectedKey] = useState<GridKey | null>(null);
   const [connected, setConnected] = useState(false);
+  const [extensionConnected, setExtensionConnected] = useState(true); // start true to avoid flash
+  const [showExtensionModal, setShowExtensionModal] = useState(false);
+  const [extensionBannerDismissed, setExtensionBannerDismissed] = useState(false);
   const [pressedKey, setPressedKey] = useState<GridKey | null>(null);
   const [showTemplates, setShowTemplates] = useState(false);
   const [suggestions, setSuggestions] = useState<any>(null);
@@ -41,6 +45,8 @@ export function App() {
     keybow.getSuggestions().then(setSuggestions);
     keybow.getInstalledApps().then(setInstalledApps as any);
     keybow.getDeviceStatus().then(setConnected);
+    keybow.getExtensionStatus().then(setExtensionConnected);
+    keybow.onExtensionStatus(setExtensionConnected);
     keybow.onProfileChanged((name) => {
       setConfig((prev) => prev ? { ...prev, activeProfile: name } : prev);
     });
@@ -82,6 +88,17 @@ export function App() {
 
   return (
     <div className="app">
+      {!extensionConnected && !extensionBannerDismissed && (
+        <div className="extension-banner">
+          Browser extension not set up —{' '}
+          <button onClick={() => setShowExtensionModal(true)}>View setup instructions</button>
+          <button aria-label="Dismiss banner" onClick={() => setExtensionBannerDismissed(true)}>✕</button>
+        </div>
+      )}
+      <ExtensionSetupModal
+        open={showExtensionModal}
+        onClose={() => setShowExtensionModal(false)}
+      />
       <header className="app-header">
         <h1>Keybow Companion</h1>
         <span className={`status ${connected ? 'connected' : 'disconnected'}`}>

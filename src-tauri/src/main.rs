@@ -1,17 +1,24 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use std::sync::{Arc, Mutex};
+use std::sync::atomic::AtomicBool;
 use std::time::{Duration, Instant};
 
 use tauri::Emitter;
-use tauri::Manager;
+use tauri::{
+    menu::{Menu, MenuItem},
+    tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
+    Manager,
+};
 
 use keybow_companion::app_switcher::AppSwitcher;
 use keybow_companion::commands::{self, AppState};
+use keybow_companion::extension_setup::ensure_extension_installed;
 use keybow_companion::ipc_server::IpcServer;
 use keybow_companion::profiles::ProfileEngine;
 use keybow_companion::serial::{SerialEvent, SerialManager};
 use keybow_companion::types::{ActionTarget, ActionType, KeyEventType};
+use std::sync::atomic::Ordering;
 
 fn debug_log(msg: &str) {
     use std::io::Write;
@@ -60,31 +67,7 @@ fn main() {
         Err(e) => debug_log(&format!("[Main] Initial serial connect failed (will retry): {}", e)),
     }
 
-    // Start IPC server for browser extension bridge
     let ipc_server = std::sync::Arc::new(IpcServer::new());
-    let ipc_for_thread = ipc_server.clone();
-    std::thread::spawn(move || {
-        let rt = tokio::runtime::Runtime::new().expect("Failed to create tokio runtime");
-        rt.block_on(async {
-            let server = ipc_for_thread;
-            debug_log("[IPC] Starting TCP server on 127.0.0.1:23847");
-            let server_for_cb = server.clone();
-            match server.start(move |msg| {
-                debug_log(&format!("[IPC] Received: {}", msg));
-                // Broadcast focusOrOpen requests to all clients (native host bridge)
-                if msg.get("action").and_then(|v| v.as_str()) == Some("focusOrOpen") {
-                    server_for_cb.broadcast(&msg);
-                }
-            }).await {
-                Ok(addr) => debug_log(&format!("[IPC] Listening on {}", addr)),
-                Err(e) => debug_log(&format!("[IPC] Failed to start: {}", e)),
-            }
-            // Keep the runtime alive
-            loop {
-                tokio::time::sleep(Duration::from_secs(3600)).await;
-            }
-        });
-    });
 
     let state = AppState {
         profiles: Mutex::new(profiles),
@@ -92,6 +75,8 @@ fn main() {
         ipc: ipc_server.clone(),
         templates: include_str!("../../src/data/templates.json").to_string(),
         suggestions: include_str!("../../src/data/suggestions.json").to_string(),
+        tray_status_item: Mutex::new(None),
+        extension_connected: Arc::new(AtomicBool::new(false)),
     };
 
     tauri::Builder::default()
@@ -105,6 +90,7 @@ fn main() {
             commands::get_suggestions,
             commands::preview_led,
             commands::get_device_status,
+            commands::get_extension_status,
         ])
         .setup(|app| {
             let handle = app.handle().clone();
@@ -130,10 +116,20 @@ fn main() {
                                 Ok(()) => {
                                     debug_log("[Serial] Reconnected!");
                                     let _ = handle.emit("device-status", true);
+                                    if let Ok(item) = state.tray_status_item.lock() {
+                                        if let Some(ref item) = *item {
+                                            item.set_text("Keybow: Connected").ok();
+                                        }
+                                    }
                                 }
                                 Err(e) => {
                                     debug_log(&format!("[Serial] Reconnect failed: {}", e));
                                     let _ = handle.emit("device-status", false);
+                                    if let Ok(item) = state.tray_status_item.lock() {
+                                        if let Some(ref item) = *item {
+                                            item.set_text("Keybow: Disconnected").ok();
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -159,6 +155,11 @@ fn main() {
                                         serial.send_led(key, color);
                                     }
                                     let _ = handle.emit("device-status", true);
+                                    if let Ok(item) = state.tray_status_item.lock() {
+                                        if let Some(ref item) = *item {
+                                            item.set_text("Keybow: Connected").ok();
+                                        }
+                                    }
                                 }
                                 SerialEvent::KeyEvent(ke) => {
                                     let event_str = format!("{:?}", ke.event);
@@ -249,7 +250,77 @@ fn main() {
                 }
             });
 
+            // Build tray context menu
+            let status_item = MenuItem::with_id(app, "status", "Keybow: Disconnected", false, None::<&str>)?;
+            let open_item = MenuItem::with_id(app, "open", "Open", true, None::<&str>)?;
+            let quit_item = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
+            let menu = Menu::with_items(app, &[&open_item, &status_item, &quit_item])?;
+
+            let _tray = TrayIconBuilder::new()
+                .icon(app.default_window_icon().unwrap().clone())
+                .menu(&menu)
+                .show_menu_on_left_click(false)
+                .on_menu_event(|app, event| match event.id.as_ref() {
+                    "open" => {
+                        if let Some(w) = app.get_webview_window("main") {
+                            w.show().unwrap();
+                            w.set_focus().unwrap();
+                        }
+                    }
+                    "quit" => app.exit(0),
+                    _ => {}
+                })
+                .on_tray_icon_event(|tray, event| {
+                    if let TrayIconEvent::Click {
+                        button: MouseButton::Left,
+                        button_state: MouseButtonState::Up,
+                        ..
+                    } = event
+                    {
+                        let app = tray.app_handle();
+                        if let Some(w) = app.get_webview_window("main") {
+                            w.show().unwrap();
+                            w.set_focus().unwrap();
+                        }
+                    }
+                })
+                .build(app)?;
+
+            // Store status_item in AppState for later updates
+            {
+                let state = app.state::<AppState>();
+                let mut item = state.tray_status_item.lock().unwrap();
+                *item = Some(status_item);
+            }
+
+            // First-launch extension setup (non-fatal)
+            match ensure_extension_installed(&app.handle()) {
+                Ok(true) => debug_log("[Setup] Extension installed for first time"),
+                Ok(false) => debug_log("[Setup] Extension already installed"),
+                Err(e) => debug_log(&format!("[Setup] Extension install failed: {}", e)),
+            }
+
+            // Start IPC server and wire extension connection status
+            let ipc_handle = app.handle().clone();
+            let ipc = app.state::<AppState>().ipc.clone();
+            tauri::async_runtime::spawn(async move {
+                ipc.start(
+                    |_msg| {},
+                    move |connected| {
+                        let state = ipc_handle.state::<AppState>();
+                        state.extension_connected.store(connected, Ordering::Relaxed);
+                        let _ = ipc_handle.emit("extension-status", connected);
+                    },
+                ).await.ok();
+            });
+
             Ok(())
+        })
+        .on_window_event(|window, event| {
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                window.hide().unwrap();
+                api.prevent_close();
+            }
         })
         .run(tauri::generate_context!())
         .expect("error running Keybow Companion");

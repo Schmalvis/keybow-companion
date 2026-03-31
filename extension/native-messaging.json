@@ -1,7 +1,7 @@
 {
   "name": "com.keybow.companion",
   "description": "Keybow Companion native messaging host",
-  "path": "C:\\Users\\malvis\\ws\\keybow-companion\\.worktrees\\tauri-migration\\extension\\native-host.bat",
+  "path": "NATIVE_HOST_PATH",
   "type": "stdio",
-  "allowed_origins": ["chrome-extension://dahmpfoobgjghfabepcckdobhkogkgle/"]
+  "allowed_origins": ["chrome-extension://bnmcjgpkepkoheedgnhgaadegmomaacm/"]
 }

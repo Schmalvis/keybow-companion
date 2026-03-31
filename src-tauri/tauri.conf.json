@@ -6,7 +6,7 @@
     "frontendDist": "../dist",
     "devUrl": "http://localhost:5173",
     "beforeDevCommand": "npm run dev",
-    "beforeBuildCommand": "npm run build"
+    "beforeBuildCommand": "npm run build && cargo build --release --bin native-host --manifest-path src-tauri/Cargo.toml"
   },
   "app": {
     "withGlobalTauri": true,
@@ -32,6 +32,12 @@
       "icons/32x32.png",
       "icons/128x128.png",
       "icons/icon.ico"
-    ]
+    ],
+    "resources": {
+      "../extension/background.js": "extension/background.js",
+      "../extension/manifest.json": "extension/manifest.json",
+      "../extension/native-messaging.json": "native-messaging.json",
+      "target/release/native-host.exe": "native-host.exe"
+    }
   }
 }
