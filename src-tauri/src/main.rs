@@ -13,10 +13,12 @@ use tauri::{
 
 use keybow_companion::app_switcher::AppSwitcher;
 use keybow_companion::commands::{self, AppState};
+use keybow_companion::extension_setup::ensure_extension_installed;
 use keybow_companion::ipc_server::IpcServer;
 use keybow_companion::profiles::ProfileEngine;
 use keybow_companion::serial::{SerialEvent, SerialManager};
 use keybow_companion::types::{ActionTarget, ActionType, KeyEventType};
+use std::sync::atomic::Ordering;
 
 fn debug_log(msg: &str) {
     use std::io::Write;
@@ -314,6 +316,29 @@ fn main() {
                 let mut item = state.tray_status_item.lock().unwrap();
                 *item = Some(status_item);
             }
+
+            // First-launch extension setup (non-fatal)
+            match ensure_extension_installed(&app.handle()) {
+                Ok(true) => debug_log("[Setup] Extension installed for first time"),
+                Ok(false) => debug_log("[Setup] Extension already installed"),
+                Err(e) => debug_log(&format!("[Setup] Extension install failed: {}", e)),
+            }
+
+            // Start IPC server and wire extension connection status
+            let ipc_handle = app.handle().clone();
+            let ipc = IpcServer::new();
+            tauri::async_runtime::spawn(async move {
+                ipc.start(
+                    |_msg| {
+                        // URL open messages are handled by action_executor (not yet in this branch)
+                    },
+                    move |connected| {
+                        let state = ipc_handle.state::<AppState>();
+                        state.extension_connected.store(connected, Ordering::Relaxed);
+                        let _ = ipc_handle.emit("extension-status", connected);
+                    },
+                ).await.ok();
+            });
 
             Ok(())
         })
