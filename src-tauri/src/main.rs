@@ -4,7 +4,11 @@ use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 use tauri::Emitter;
-use tauri::Manager;
+use tauri::{
+    menu::{Menu, MenuItem},
+    tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
+    Manager,
+};
 
 use keybow_companion::app_switcher::AppSwitcher;
 use keybow_companion::commands::{self, AppState};
@@ -92,6 +96,7 @@ fn main() {
         ipc: ipc_server.clone(),
         templates: include_str!("../../src/data/templates.json").to_string(),
         suggestions: include_str!("../../src/data/suggestions.json").to_string(),
+        tray_status_item: Mutex::new(None),
     };
 
     tauri::Builder::default()
@@ -248,6 +253,49 @@ fn main() {
                     }
                 }
             });
+
+            // Build tray context menu
+            let status_item = MenuItem::with_id(app, "status", "Keybow: Disconnected", false, None::<&str>)?;
+            let open_item = MenuItem::with_id(app, "open", "Open", true, None::<&str>)?;
+            let quit_item = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
+            let menu = Menu::with_items(app, &[&open_item, &status_item, &quit_item])?;
+
+            let _tray = TrayIconBuilder::new()
+                .icon(app.default_window_icon().unwrap().clone())
+                .menu(&menu)
+                .show_menu_on_left_click(false)
+                .on_menu_event(|app, event| match event.id.as_ref() {
+                    "open" => {
+                        if let Some(w) = app.get_webview_window("main") {
+                            w.show().unwrap();
+                            w.set_focus().unwrap();
+                        }
+                    }
+                    "quit" => app.exit(0),
+                    _ => {}
+                })
+                .on_tray_icon_event(|tray, event| {
+                    if let TrayIconEvent::Click {
+                        button: MouseButton::Left,
+                        button_state: MouseButtonState::Up,
+                        ..
+                    } = event
+                    {
+                        let app = tray.app_handle();
+                        if let Some(w) = app.get_webview_window("main") {
+                            w.show().unwrap();
+                            w.set_focus().unwrap();
+                        }
+                    }
+                })
+                .build(app)?;
+
+            // Store status_item in AppState for later updates
+            {
+                let state = app.state::<AppState>();
+                let mut item = state.tray_status_item.lock().unwrap();
+                *item = Some(status_item);
+            }
 
             Ok(())
         })

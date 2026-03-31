@@ -1,5 +1,6 @@
 use std::sync::{Arc, Mutex};
 use tauri::State;
+use tauri::menu::MenuItem;
 use crate::app_detector::{detect_installed_apps, DetectedApp};
 use crate::ipc_server::IpcServer;
 use crate::profiles::ProfileEngine;
@@ -12,6 +13,7 @@ pub struct AppState {
     pub ipc: Arc<IpcServer>,
     pub templates: String,
     pub suggestions: String,
+    pub tray_status_item: Mutex<Option<MenuItem<tauri::Wry>>>,
 }
 
 #[tauri::command]
