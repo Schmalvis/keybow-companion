@@ -68,7 +68,13 @@ In `src-tauri/tauri.conf.json` bundle config, add NSIS hooks to:
    ```
 4. On uninstall: remove the registry key and the installed files
 
-The `native-messaging.json` `path` field must point to the installed `native-host.js` location (not the source path).
+### Problem: Native Host Requires Node.js
+
+The current `native-host.js` is a Node.js script. Chrome launches it directly as the native messaging host, which means Node.js must be installed on the user's machine — an unsafe assumption for a packaged app.
+
+**Fix:** Rewrite the native host as a small Rust binary (`native-host`) compiled as a separate crate in `src-tauri/`. It does the same job: read Chrome's native messaging stdio framing (4-byte LE length prefix + JSON), bridge to the TCP IPC server on port 23847, and forward responses back. ~50 lines of Rust, produces `native-host.exe` as a standalone binary with no runtime dependency.
+
+The NSIS installer bundles `native-host.exe` alongside the extension files. The `native-messaging.json` `path` field points to the installed `native-host.exe`.
 
 ### In-App Setup Banner
 
@@ -110,6 +116,7 @@ The `native-messaging.json` `path` field must point to the installed `native-hos
 | `src-tauri/src/ipc_server.rs` | Emit `extension-status` event |
 | `src-tauri/src/commands.rs` | Add `get_extension_status` command |
 | `extension/manifest.json` | Add `key` field for stable ID |
-| `extension/native-messaging.json` | Update `allowed_origins` with stable ID, update `path` |
+| `extension/native-messaging.json` | Update `allowed_origins` with stable ID, update `path` to `native-host.exe` |
+| `src-tauri/native-host/` | New Rust binary crate — native messaging stdio ↔ TCP bridge |
 | `src/app.tsx` | Extension status banner |
 | `src/components/ExtensionSetupModal.tsx` | New — setup guide modal |
