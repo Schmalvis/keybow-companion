@@ -3,6 +3,7 @@
   "name": "Keybow Companion",
   "version": "1.0.0",
   "description": "Tab management for Keybow Companion",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAoekgablKic9EM83altlR+Y0vdtOXUeF3C4gIGoN+m5I6U9z/nJv7XAlbIlc5a8IUMx56ngQwAdHIoM54pgUrEjRZ0ONzhJ4mvxEbDsUefM97Qke6Ftx5bcUN8rB9hFj4XAAjC6E7xND8DdJewlTlayWhSav1qanXHZJCU3spuU9RsgfBV1wfOSM+iNRgOpxzuLWodelPTnD/gdN6CbWj1YU7ytxD3r9dLBdp8Z4U6uwfeZtfqMvkKX4XLTlcehfhX0ryLo9gSRXH55alSjhRBTJglsYfRtHclIBBaE69oy+X+lUPpoPYv764BeYJLP916Td3EVDvDJe7nNrN1dBz+wIDAQAB",
   "permissions": ["tabs", "nativeMessaging"],
   "background": { "service_worker": "background.js" },
   "icons": {
