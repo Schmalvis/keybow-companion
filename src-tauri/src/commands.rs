@@ -1,4 +1,5 @@
 use std::sync::{Arc, Mutex};
+use std::sync::atomic::{AtomicBool, Ordering};
 use tauri::State;
 use tauri::menu::MenuItem;
 use crate::app_detector::{detect_installed_apps, DetectedApp};
@@ -14,6 +15,7 @@ pub struct AppState {
     pub templates: String,
     pub suggestions: String,
     pub tray_status_item: Mutex<Option<MenuItem<tauri::Wry>>>,
+    pub extension_connected: Arc<AtomicBool>,
 }
 
 #[tauri::command]
@@ -60,6 +62,11 @@ pub fn get_suggestions(state: State<AppState>) -> Result<serde_json::Value, Stri
 pub fn get_device_status(state: State<AppState>) -> Result<bool, String> {
     let serial = state.serial.lock().map_err(|e| e.to_string())?;
     Ok(serial.is_connected())
+}
+
+#[tauri::command]
+pub fn get_extension_status(state: State<AppState>) -> bool {
+    state.extension_connected.load(Ordering::Relaxed)
 }
 
 #[tauri::command]

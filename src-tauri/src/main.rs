@@ -1,6 +1,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use std::sync::{Arc, Mutex};
+use std::sync::atomic::AtomicBool;
 use std::time::{Duration, Instant};
 
 use tauri::Emitter;
@@ -97,6 +98,7 @@ fn main() {
         templates: include_str!("../../src/data/templates.json").to_string(),
         suggestions: include_str!("../../src/data/suggestions.json").to_string(),
         tray_status_item: Mutex::new(None),
+        extension_connected: Arc::new(AtomicBool::new(false)),
     };
 
     tauri::Builder::default()
@@ -110,6 +112,7 @@ fn main() {
             commands::get_suggestions,
             commands::preview_led,
             commands::get_device_status,
+            commands::get_extension_status,
         ])
         .setup(|app| {
             let handle = app.handle().clone();
