@@ -135,10 +135,20 @@ fn main() {
                                 Ok(()) => {
                                     debug_log("[Serial] Reconnected!");
                                     let _ = handle.emit("device-status", true);
+                                    if let Ok(item) = state.tray_status_item.lock() {
+                                        if let Some(ref item) = *item {
+                                            item.set_text("Keybow: Connected").ok();
+                                        }
+                                    }
                                 }
                                 Err(e) => {
                                     debug_log(&format!("[Serial] Reconnect failed: {}", e));
                                     let _ = handle.emit("device-status", false);
+                                    if let Ok(item) = state.tray_status_item.lock() {
+                                        if let Some(ref item) = *item {
+                                            item.set_text("Keybow: Disconnected").ok();
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -164,6 +174,11 @@ fn main() {
                                         serial.send_led(key, color);
                                     }
                                     let _ = handle.emit("device-status", true);
+                                    if let Ok(item) = state.tray_status_item.lock() {
+                                        if let Some(ref item) = *item {
+                                            item.set_text("Keybow: Connected").ok();
+                                        }
+                                    }
                                 }
                                 SerialEvent::KeyEvent(ke) => {
                                     let event_str = format!("{:?}", ke.event);
