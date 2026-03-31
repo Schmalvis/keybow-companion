@@ -86,10 +86,13 @@ impl SerialManager {
         let port_name = Self::auto_detect().ok_or("No Keybow found")?;
         info!("[Serial] Opening port: {}", port_name);
 
-        let port = serialport::new(&port_name, 115_200)
-            .timeout(Duration::from_millis(100))
+        let mut port = serialport::new(&port_name, 115_200)
+            .timeout(Duration::from_millis(500))
             .open()
             .map_err(|e| format!("Failed to open {}: {}", port_name, e))?;
+
+        // Set DTR (Data Terminal Ready) — required for some USB CDC serial devices
+        let _ = port.write_data_terminal_ready(true);
 
         *self.port.lock().unwrap() = Some(port);
         self.running.store(true, Ordering::SeqCst);

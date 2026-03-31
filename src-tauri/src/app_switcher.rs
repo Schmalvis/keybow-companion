@@ -1,11 +1,16 @@
 use std::ffi::OsString;
 use std::os::windows::ffi::OsStringExt;
+use windows::core::PWSTR;
 use windows::Win32::Foundation::{HWND, LPARAM};
-use windows::Win32::System::ProcessStatus::GetModuleFileNameExW;
-use windows::Win32::System::Threading::{OpenProcess, PROCESS_QUERY_INFORMATION, PROCESS_VM_READ};
+use windows::Win32::System::Threading::{
+    OpenProcess, QueryFullProcessImageNameW, PROCESS_NAME_WIN32, PROCESS_QUERY_LIMITED_INFORMATION,
+};
+use windows::Win32::UI::Input::KeyboardAndMouse::{
+    SendInput, INPUT, INPUT_KEYBOARD, KEYEVENTF_KEYUP, VK_MENU,
+};
 use windows::Win32::UI::WindowsAndMessaging::{
-    EnumWindows, GetForegroundWindow, GetWindowThreadProcessId, IsWindowVisible,
-    SetForegroundWindow, ShowWindow, SW_RESTORE,
+    BringWindowToTop, EnumWindows, GetForegroundWindow, GetWindowThreadProcessId,
+    IsWindowVisible, SetForegroundWindow, ShowWindow, SW_RESTORE,
 };
 
 pub struct AppSwitcher;
@@ -38,20 +43,21 @@ unsafe extern "system" fn enum_windows_proc(hwnd: HWND, lparam: LPARAM) -> windo
 fn get_process_name_for_pid(pid: u32) -> Option<String> {
     unsafe {
         let handle =
-            OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, false, pid).ok()?;
+            OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, false, pid).ok()?;
 
         let mut buf = [0u16; 260];
-        let len = GetModuleFileNameExW(Some(handle), None, &mut buf);
-        if len == 0 {
+        let mut size = buf.len() as u32;
+        let ok = QueryFullProcessImageNameW(handle, PROCESS_NAME_WIN32, PWSTR(buf.as_mut_ptr()), &mut size);
+        if ok.is_err() {
             return None;
         }
 
-        let path = OsString::from_wide(&buf[..len as usize]);
+        let path = OsString::from_wide(&buf[..size as usize]);
         let path_str = path.to_string_lossy().to_string();
 
-        // Extract just the filename
+        // Extract filename without extension (e.g. "Code" from "Code.exe")
         std::path::Path::new(&path_str)
-            .file_name()
+            .file_stem()
             .map(|n| n.to_string_lossy().to_string())
     }
 }
@@ -102,8 +108,21 @@ impl AppSwitcher {
 
         if let Some(hwnd) = ctx.found {
             unsafe {
+                // Simulate Alt key press to bypass foreground window restrictions
+                let mut input = INPUT {
+                    r#type: INPUT_KEYBOARD,
+                    ..std::mem::zeroed()
+                };
+                input.Anonymous.ki.wVk = VK_MENU;
+                SendInput(&[input], std::mem::size_of::<INPUT>() as i32);
+
                 let _ = ShowWindow(hwnd, SW_RESTORE);
                 let _ = SetForegroundWindow(hwnd);
+                BringWindowToTop(hwnd);
+
+                // Release Alt key
+                input.Anonymous.ki.dwFlags = KEYEVENTF_KEYUP;
+                SendInput(&[input], std::mem::size_of::<INPUT>() as i32);
             }
             true
         } else {
@@ -112,10 +131,26 @@ impl AppSwitcher {
     }
 
     fn launch(&self, exe_path: &str) -> Result<(), String> {
-        std::process::Command::new(exe_path)
+        let expanded = Self::expand_env_vars(exe_path);
+        std::process::Command::new(&expanded)
             .spawn()
-            .map_err(|e| format!("Failed to launch '{}': {}", exe_path, e))?;
+            .map_err(|e| format!("Failed to launch '{}': {}", expanded, e))?;
         Ok(())
+    }
+
+    /// Expand %VAR% environment variables in a path string
+    fn expand_env_vars(path: &str) -> String {
+        let mut result = path.to_string();
+        while let Some(start) = result.find('%') {
+            if let Some(end) = result[start + 1..].find('%') {
+                let var_name = &result[start + 1..start + 1 + end];
+                let replacement = std::env::var(var_name).unwrap_or_default();
+                result = format!("{}{}{}", &result[..start], replacement, &result[start + 2 + end..]);
+            } else {
+                break;
+            }
+        }
+        result
     }
 }
 

@@ -17,6 +17,12 @@ export const keybow = {
     listen<boolean>("device-status", (e) => cb(e.payload));
   },
   onKeyEvent: (cb: (key: string, event: string) => void) => {
-    listen<{ key: string; event: string }>("key-event", (e) => cb(e.payload.key, e.payload.event));
+    listen<any>("key-event", (e) => {
+      console.log("[api] key-event payload:", JSON.stringify(e.payload));
+      const p = e.payload;
+      if (p && p.key && p.event) {
+        cb(p.key, p.event);
+      }
+    });
   },
 };

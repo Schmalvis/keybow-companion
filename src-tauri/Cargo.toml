@@ -19,6 +19,7 @@ version = "0.61"
 features = [
     "Win32_Foundation",
     "Win32_UI_WindowsAndMessaging",
+    "Win32_UI_Input_KeyboardAndMouse",
     "Win32_System_Threading",
     "Win32_System_ProcessStatus",
     "Win32_System_Com",
