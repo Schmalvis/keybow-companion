@@ -115,6 +115,7 @@ Suggestions appear inline within wizard Step 2, contextual to the chosen action 
 At app startup, run a PowerShell script via `execFile` to scan Start Menu shortcuts (`.lnk` files) and extract:
 - Display name
 - Target exe path
+
 - Process name (derived from exe filename)
 
 Results are cached in memory for the session. No persistent storage needed — the scan is fast enough to run on each launch.

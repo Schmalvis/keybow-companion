@@ -1,0 +1,58 @@
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.modal {
+  background: var(--bg-panel, #1e1e2e);
+  border: 1px solid var(--border, #333);
+  border-radius: 8px;
+  padding: 24px;
+  min-width: 320px;
+  max-width: 480px;
+}
+
+.modal-title {
+  margin: 0 0 12px;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.modal-body {
+  margin-bottom: 20px;
+  font-size: 0.9rem;
+  color: var(--text-muted, #aaa);
+}
+
+.modal-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.wizard-btn.danger {
+  background: var(--danger, #c0392b);
+  color: var(--on-danger, white);
+  border-color: var(--danger, #c0392b);
+}
+
+.modal-text-input {
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 4px;
+  border: 1px solid var(--border, #333);
+  background: var(--bg-input, #2a2a3e);
+  color: inherit;
+  font-size: 0.9rem;
+  box-sizing: border-box;
+}
+
+.modal-text-input:focus {
+  outline: none;
+  border-color: var(--accent, #7c5cbf);
+}
